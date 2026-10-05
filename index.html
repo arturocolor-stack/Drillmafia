@@ -2888,7 +2888,7 @@ function paint(html){var a=admEl(), keep=$('.adm-main',a), st=keep?keep.scrollTo
 function renderAdmin(u){
   var pendB=ups.filter(function(b){return b.status==='pending'}).length, toShip=ordersC.filter(function(o){return o.status==='paid'&&hasMerch(o)&&!o.shipped_at}).length, nb=books.filter(function(b){return b.status==='paid'&&b.date>=iso(new Date())}).length;
   var owe=PINFOS.length+earn.length?users.filter(function(x){return x.role==='producer'&&dueOf(x.email)>=minPay()}).length:0;
-  var body=ptab==='res'?admRes():ptab==='ord'?admOrd():ptab==='bk'?admBk():ptab==='beats'?admBeats():ptab==='prod'?admProd():ptab==='pay'?admPay():ptab==='merch'?merchAdmin():ptab==='codes'?codesAdmin():ptab==='est'?'<div class="card">'+studioAdmin()+'</div><div class="card">'+availAdmin()+'</div>':admMe(u)+admSet()+admGenres()+admDrops()+admTerms();
+  var body=ptab==='res'?admRes():ptab==='ord'?admOrd():ptab==='bk'?admBk():ptab==='beats'?admBeats():ptab==='prod'?admProd():ptab==='pay'?admPay():ptab==='merch'?merchAdmin():ptab==='codes'?codesAdmin():ptab==='est'?'<div class="card">'+studioAdmin()+'</div><div class="card">'+availAdmin()+'</div>':admMe(u)+admMail()+admSet()+admGenres()+admDrops()+admTerms();
   paint(shellHTML(u,ATABS,ASUB,{ord:toShip,beats:pendB,bk:nb,pay:owe,prod:APPS.length},'admin',body));
 }
 function renderProd(u){
@@ -3399,6 +3399,28 @@ document.addEventListener('input',function(e){
   if(el){el.textContent=mine.toLocaleString('es-ES')+' %';el.classList.toggle('bad',mine<=0)} if(sv)sv.disabled=mine<=0;
 });
 
+
+/* ---------- emails: estado y prueba desde Ajustes ---------- */
+var MAILST=null;
+function checkMail(){if(!sb||MAILST)return;MAILST={loading:true};sb.functions.invoke('mail-test',{body:{check:true}}).then(function(r){MAILST=r.data||{configured:false};if(admOpen()&&ptab==='set')renderPanel()}).catch(function(){MAILST={configured:false}})}
+function admMail(){
+  checkMail(); var st=MAILST||{loading:true};
+  return '<div class="card"><h3>Emails automáticos</h3><p class="sub2">Bienvenida al aprobar un productor, compra con el beat y el contrato, y aviso de envío con seguimiento.</p>'+
+    (st.loading?'<p class="tsub">Comprobando…</p>':st.configured?'<p class="ok-line">Activos. Se envían desde <b>'+esc(st.from||'')+'</b></p>':'<p class="warn-line">Todavía no están activos: falta conectar Resend (la clave RESEND_API_KEY en Supabase).</p>')+
+    '<div class="gadd"><input id="mtTo" type="email" value="'+esc(LIC.email||'')+'" aria-label="Email para la prueba"><button class="btn primary" id="mtGo"'+(st.configured?'':' disabled')+'>Enviarme los 3 emails de prueba</button></div><p class="tsub" id="mtMsg" role="status"></p></div>';
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#mtGo'))return;
+  var b=$('#mtGo'), to=$('#mtTo').value.trim(), m=$('#mtMsg');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to))return m.textContent='Escribe un email válido.';
+  b.disabled=true; m.textContent='Enviando…';
+  sb.functions.invoke('mail-test',{body:{to:to,site:location.origin+location.pathname}}).then(function(r){
+    b.disabled=false; var d=r.data||{};
+    if(!d.configured)return m.textContent='Resend no está configurado todavía.';
+    m.textContent=(d.sent&&d.sent.length?'Enviados: '+d.sent.join(', ')+'. ':'')+(d.failed&&d.failed.length?'Fallaron: '+d.failed.join(' | '):'Revisa tu bandeja (y la carpeta de spam).');
+  }).catch(function(err){b.disabled=false;m.textContent='Error: '+err.message});
+});
+
 /* init */
 $$('[data-logo]').forEach(function(i){i.src=LOGO});
 renderChips(); renderList(); renderCart(); fillHero(true);
@@ -3408,7 +3430,7 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){bui
 requestAnimationFrame(loop);
 $('#gateYes').focus();
 document.documentElement.classList.add('ready');
-if(sb)cloudInit().then(function(){return loadLikes()}).then(function(){openFromHash();openBeatFromHash()});
+if(sb)cloudInit().then(function(){return loadLikes()}).then(function(){openFromHash();openBeatFromHash();if(location.hash==='#miembros'){try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}who()?openPanel():openAuth('in')}});
 })();
 </script>
 </body>
