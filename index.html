@@ -938,6 +938,17 @@ body:has(.adm:not([hidden])) .ring{display:none!important}
 .jfn{flex:1;min-width:160px}
 .jkind{display:flex;gap:14px;font-size:.9rem}.jkind label{display:flex;align-items:center;gap:6px;cursor:pointer}.jkind input{accent-color:#fff}
 .netbar{position:sticky;top:0;z-index:90;background:#ff4d6d;color:#000;font:600 .9rem var(--body);padding:10px 16px;text-align:center}.netbar button{margin-left:10px;background:#000;color:#fff;border:0;border-radius:99px;padding:5px 12px;font:700 .8rem var(--body);cursor:pointer}
+
+/* ofertas, códigos, cuota y calendarios */
+s.was{color:var(--mute);font-weight:400}
+.offtag{display:inline-block;background:#ff4d6d;color:#000;border-radius:99px;padding:1px 7px;font:800 .7rem var(--body);vertical-align:middle;margin-left:4px}
+.bk-opt .offtag{grid-column:1/-1;justify-self:start;margin:6px 0 0}
+.bkcode{margin-top:14px}
+.mbar{margin:4px 0 16px;font-size:.92rem}.mbar .dbar{margin-top:8px}
+.mcard2{border-color:#fff}
+code{background:#15171C;border-radius:4px;padding:1px 5px;font-size:.85em}
+@media (min-width:961px){.row{grid-template-columns:56px 40px minmax(140px,1fr) minmax(150px,1.7fr) 76px 120px 330px}}
+.buy .price{white-space:nowrap}
 </style>
 
 </head>
@@ -1740,7 +1751,7 @@ function rowHTML(b,i){
       '<div class="wave" aria-hidden="true">'+bars+'<div class="fill">'+bars+'</div></div>'+
       '<div class="meta"><span>'+b.bpm+' BPM</span><span>'+esc(b.key)+'</span></div>'+
       '<div class="tags">'+b.tags.map(function(t){return '<span class="tag">'+esc(tagLabel(t))+'</span>'}).join('')+'</div>'+
-      '<div class="buy">'+(b.custom?likeBtn(b):'')+'<span class="price">desde <b>'+eur.format(bprice(b.id,'mp3'))+'</b></span><button class="btn" data-buy>Licencia</button></div>'+
+      '<div class="buy">'+(b.custom?likeBtn(b):'')+'<span class="price">'+priceHTML(b)+'</span><button class="btn" data-buy>Licencia</button></div>'+
     '</article>';
 }
 function renderList(){
@@ -2210,7 +2221,7 @@ document.addEventListener('click',function(e){
 });
 window.addEventListener('load',function(){if(location.hash==='#miembros')openAuth('in');if(location.hash==='#demo')startDemo()});
 window.addEventListener('hashchange',function(){if(location.hash==='#miembros')openAuth('in');if(location.hash==='#demo')startDemo()});
-function bprice(id,tier){
+function bpriceOld(id,tier){
   var b=beatById(id), u=b&&b.owner&&users.filter(function(x){return x.email===b.owner})[0];
   if(u&&u.prices&&u.prices[tier]>0)return u.prices[tier];
   return tierById(tier).price;
@@ -2404,7 +2415,7 @@ function refreshBusy(){
 async function loadAll(){
   var R=function(x){if(x.error)throw x.error;return x.data||[]}, admin=false, mine=null;
   if(me){var m0=await sb.from('profiles').select('*').eq('id',me).maybeSingle();mine=m0.data;admin=!!(mine&&mine.role==='admin')}
-  var mk=function(p,mail){return {email:p.id,mail:mail||'',name:p.name,role:p.role||'producer',avatar:p.avatar_url,bio:p.bio||'',prices:p.prices||{},studio:p.studio||{}}};
+  var mk=function(p,mail){return {email:p.id,mail:mail||'',name:p.name,role:p.role||'producer',avatar:p.avatar_url,bio:p.bio||'',prices:p.prices||{},studio:p.studio||{},offer:p.offer||{},plan:p.plan||'standard'}};
   users=R(await sb.from('producers_public').select('*')).map(function(p){return mk(p)});
   if(mine){var sf=users.filter(function(u){return u.email===mine.id})[0];if(sf){sf.mail=mine.email}else users.push(mk(mine,mine.email))}
   if(admin)R(await sb.from('profiles').select('*')).forEach(function(p){var u=users.filter(function(x){return x.email===p.id})[0];if(u){u.mail=p.email;u.role=p.role}else users.push(mk(p,p.email))});
@@ -2414,8 +2425,9 @@ async function loadAll(){
   if(pd.length){PRODUCTS={};pd.forEach(function(r){PRODUCTS[r.id]=r.data})}
   else{PRODUCTS={};if(admin){PRODUCTS=JSON.parse(JSON.stringify(DEFP));LS.s('dm_merch',PRODUCTS)}}
   GENRES=R(await sb.from('genres').select('*'));applyGenres(GENRES);
-  R(await sb.from('settings').select('*')).forEach(function(r){if(r.key==='studio_info'&&r.value)STINFO=Object.assign({},STINFO,r.value);if(r.key==='drops'&&r.value)DROPCFG=Object.assign({},DROPCFG,r.value);if(r.key==='perf'&&r.value)PERFCFG=Object.assign({},PERFCFG,r.value);if(r.key==='licensor'&&r.value)LIC=Object.assign({},LIC,r.value);if(r.key==='tag'&&r.value&&r.value.path)TAG={path:r.value.path,name:r.value.name,url:sb.storage.from('previews').getPublicUrl(r.value.path).data.publicUrl};if(r.key==='links')links=r.value||links;if(r.key==='studio'&&r.value){var v=r.value;ST.rate=Number(v.rate)||ST.rate;ST.open=+v.open||ST.open;ST.close=+v.close||ST.close;ST.min=+v.min||ST.min;ST.max=+v.max||ST.max;studioTxt()}});
+  R(await sb.from('settings').select('*')).forEach(function(r){if(r.key==='member'&&r.value)MEMBERCFG=Object.assign({},MEMBERCFG,r.value);if(r.key==='studio_info'&&r.value)STINFO=Object.assign({},STINFO,r.value);if(r.key==='drops'&&r.value)DROPCFG=Object.assign({},DROPCFG,r.value);if(r.key==='perf'&&r.value)PERFCFG=Object.assign({},PERFCFG,r.value);if(r.key==='licensor'&&r.value)LIC=Object.assign({},LIC,r.value);if(r.key==='tag'&&r.value&&r.value.path)TAG={path:r.value.path,name:r.value.name,url:sb.storage.from('previews').getPublicUrl(r.value.path).data.publicUrl};if(r.key==='links')links=r.value||links;if(r.key==='studio'&&r.value){var v=r.value;ST.rate=Number(v.rate)||ST.rate;ST.open=+v.open||ST.open;ST.close=+v.close||ST.close;ST.min=+v.min||ST.min;ST.max=+v.max||ST.max;studioTxt()}});
   busy=R(await sb.from('taken_slots').select('*')).map(function(x){return {id:x.id,d:x.d,s:x.s,e:x.e,src:x.src}});
+  PBUSY=R(await sb.from('producer_busy').select('*').gte('d',iso(new Date())));
   if(admin){
     books=R(await sb.from('bookings').select('*').neq('status','cancelled').order('d')).map(function(b){return {id:b.id,date:b.d,start:b.h,dur:b.dur,name:b.name,email:b.email,status:b.status,deposit:+b.deposit||0,paid_at:b.paid_at,producer:b.producer,total:+b.total||0,rest:b.rest_paid_at}});
     var sa=R(await sb.from('secrets').select('*').eq('key','studio_address'));STADDR=sa[0]?sa[0].value:'';
@@ -2431,6 +2443,7 @@ async function loadAll(){
     JOBS=R(await sb.from('jobs').select('*').order('created_at',{ascending:false}));
     DELIVS=R(await sb.from('deliveries').select('*'));
     var tm=await sb.rpc('my_terms');TERMS=tm.data||null;
+    STUDIOCAL=R(await sb.from('cal_sources').select('*').is('owner',null))[0]||null;
   }else{books=[];codes=codes.filter(function(c){return c._chk});icalUrl='';earn=[];payoutsC=[];PINFO=null;PERF=null;
     if(mine&&mine.role==='producer'){
       earn=R(await sb.from('earnings').select('*').order('created_at',{ascending:false}));
@@ -2441,6 +2454,8 @@ async function loadAll(){
       playsD=R(await sb.from('beat_plays_daily').select('*').gte('d',iso(new Date(Date.now()-30*864e5))));
       SPLITS=R(await sb.from('beat_splits').select('*'));
       MYBOOKS=R(await sb.from('bookings').select('*').eq('producer',me).neq('status','cancelled'));
+      MYCODES=R(await sb.from('producer_codes').select('*').eq('producer',me).order('created_at',{ascending:false}));
+      CALSRC=R(await sb.from('cal_sources').select('*').eq('owner',me))[0]||null;
       JOBS=R(await sb.from('jobs').select('*').eq('producer',me).order('created_at',{ascending:false}));
       DELIVS=R(await sb.from('deliveries').select('*').eq('producer',me));
     }
@@ -2569,7 +2584,7 @@ document.addEventListener('click',function(e){
     ST.rate=v.rate;ST.open=v.open;ST.close=v.close;ST.min=v.min;ST.max=v.max;studioTxt();toast('Tarifa y horario guardados');
   });
 });
-function calAdmin(){
+function calAdminOld(){
   return '<h3 class="ph">Sincronizar con Google Calendar</h3><p class="note">En Google Calendar abre la configuración de tu calendario, entra en Integrar el calendario y copia la «Dirección secreta en formato iCal». Se sincroniza sola cada pocos minutos y bloquea las horas ocupadas.</p><div class="field"><label for="icalUrl">Dirección secreta iCal</label><input id="icalUrl" type="url" value="'+esc(icalUrl)+'" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"></div><div class="err" id="icalErr" role="alert"></div><div class="pact"><button class="btn primary" id="icalSave">Guardar y sincronizar</button><button class="btn" id="icalRun">Sincronizar ahora</button></div>';
 }
 function runSync(){
@@ -2836,7 +2851,7 @@ function admBk(){
   var td=iso(new Date()), act=books.filter(function(b){return b.status!=='cancelled'}).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.start-b.start});
   var up=act.filter(function(b){return b.date>=td}), past=act.filter(function(b){return b.date<td}).reverse(), ym=td.slice(0,7);
   var hrs=act.filter(function(b){return b.date.slice(0,7)===ym}).reduce(function(s,b){return s+b.dur},0);
-  function rows(l){return '<div class="tblw"><table class="tbl"><thead><tr><th>Día</th><th>Horario</th><th>Cliente</th><th>Con</th><th class="num">Señal</th><th class="num">En estudio</th><th>Estado</th><th></th></tr></thead><tbody>'+l.map(function(b){var tot=b.total||ST.rate*b.dur;return '<tr><td><b>'+fdate(b.date+'T12:00:00',{weekday:'short',day:'numeric',month:'short'})+'</b></td><td>'+b.start+':00 – '+(b.start+b.dur)+':00</td><td>'+esc(b.name)+'<small class="tsub">'+esc(b.email)+'</small></td><td>'+(b.producer?esc(uname(b.producer)):'<span class="tsub">Solo estudio</span>')+'</td><td class="num">'+eur.format(b.deposit||0)+'</td><td class="num">'+eur.format(Math.max(0,tot-(b.deposit||0)))+(b.rest?'<small class="tsub">Cobrado</small>':'')+'</td><td><span class="spill '+(b.status==='paid'?'ok':'pending')+'">'+(b.status==='paid'?'Confirmada':'Pendiente de pago')+'</span></td><td><div class="pact tact">'+(b.status==='paid'&&!b.rest?'<button class="btn" data-bkrest="'+b.id+'">Resto cobrado</button>':'')+'</div></td></tr>'}).join('')+'</tbody></table></div>'}
+  function rows(l){return '<div class="tblw"><table class="tbl"><thead><tr><th>Día</th><th>Horario</th><th>Cliente</th><th>Con</th><th class="num">Señal</th><th class="num">En estudio</th><th>Estado</th><th></th></tr></thead><tbody>'+l.map(function(b){var tot=b.total||ST.rate*b.dur;return '<tr><td><b>'+fdate(b.date+'T12:00:00',{weekday:'short',day:'numeric',month:'short'})+'</b></td><td>'+b.start+':00 – '+(b.start+b.dur)+':00</td><td>'+esc(b.name)+'<small class="tsub">'+esc(b.email)+'</small></td><td>'+(b.producer?esc(uname(b.producer)):'<span class="tsub">Solo estudio</span>')+'</td><td class="num">'+eur.format(b.deposit||0)+'</td><td class="num">'+eur.format(Math.max(0,tot-(b.deposit||0)))+(b.rest?'<small class="tsub">Cobrado</small>':'')+'</td><td><span class="spill '+(b.status==='paid'||b.status==='member'?'ok':'pending')+'">'+(b.status==='member'?'Cuota':b.status==='paid'?'Confirmada':'Pendiente de pago')+'</span></td><td><div class="pact tact">'+(b.status==='paid'&&!b.rest?'<button class="btn" data-bkrest="'+b.id+'">Resto cobrado</button>':'')+'</div></td></tr>'}).join('')+'</tbody></table></div>'}
   return '<div class="kpis">'+kpi('Próximas sesiones',up.filter(function(b){return b.status==='paid'}).length)+kpi('Horas reservadas este mes',hrs+' h')+kpi('Señales cobradas',eur.format(act.filter(function(b){return b.status==='paid'}).reduce(function(s,b){return s+(b.deposit||0)},0)))+kpi('Tarifa',ST.rate+' €/h',ST.open+':00 a '+ST.close+':00','est')+'</div>'+
     '<div class="card"><h3>Próximas</h3><p class="sub2">Ordenadas por fecha</p>'+(up.length?rows(up):'<p class="note" style="margin:0">No hay sesiones próximas.</p>')+'</div>'+
     (past.length?'<div class="card"><h3>Pasadas</h3><p class="sub2">Historial</p>'+rows(past.slice(0,30))+'</div>':'');
@@ -2850,14 +2865,14 @@ function admBeats(){
       '<p class="'+(noPv?'warn-line':'ok-line')+'">'+(noPv?noPv+(noPv===1?' beat no tiene':' beats no tienen')+' vista previa y no suenan en la web.':'Todos los beats tienen vista previa.')+'</p>'+
       '<p class="tsub" id="pvMsg"></p></div><div class="pact"><button class="btn primary" data-regen="miss"'+(noPv?'':' disabled')+'>Generar las que faltan</button><button class="btn" data-regen="all">Regenerar todas</button>'+(TAG?'':'<button class="btn" data-ptab="set">Subir tag</button>')+'</div></div>'+
     '<div class="tblw"><table class="tbl"><thead><tr><th>Beat</th><th>Productor</th><th>Estado</th><th class="num">Plays</th><th class="num">Likes</th><th class="num">Ventas</th><th></th></tr></thead><tbody>'+
-    (l.map(function(b){var a=(b.status==='ok'||isLive(b))&&b.pv?'<button class="btn" data-story="'+b.id+'">Historia</button>':'';if(b.status!=='ok'&&b.status!=='sold')a+='<button class="btn primary" data-act="ok" data-id="'+b.id+'">Aprobar</button>';if(b.status==='pending')a+='<button class="btn" data-act="rej" data-id="'+b.id+'">Rechazar</button>';a+='<button class="btn" data-act="del" data-id="'+b.id+'">Borrar</button>';
-      return '<tr><td><b>'+esc(b.title)+'</b><small class="tsub">'+b.bpm+' BPM · '+esc(b.key)+(b.pv?'':' · <span class="warn-txt">sin vista previa</span>')+'</small></td><td>'+esc(creditOf(b))+'</td><td><span class="spill '+b.status+'">'+(STS[b.status]||b.status)+'</span></td><td class="num">'+kfmt(b.plays)+'</td><td class="num">'+kfmt(b.likes)+'</td><td class="num">'+(sm[b.id]||0)+'</td><td><div class="pact tact">'+a+'</div></td></tr>'}).join('')||'<tr><td colspan="7" class="tsub">Todavía no hay beats.</td></tr>')+'</tbody></table></div>';
+    (l.map(function(b){var a=(b.status==='ok'||isLive(b))?'<button class="btn" data-copylink="'+b.id+'">Copiar enlace</button>'+(b.pv?'<button class="btn" data-story="'+b.id+'">Historia</button>':''):'';if(b.status==='pending'||b.status==='rej')a+='<button class="btn primary" data-act="ok" data-id="'+b.id+'">Aprobar</button>';if(b.status==='pending')a+='<button class="btn" data-act="rej" data-id="'+b.id+'">Rechazar</button>';a+='<button class="btn" data-act="del" data-id="'+b.id+'">Borrar</button>';
+      return '<tr><td><b>'+esc(b.title)+'</b><small class="tsub">'+b.bpm+' BPM · '+esc(b.key)+(b.pv?'':' · <span class="warn-txt">sin vista previa</span>')+'</small></td><td>'+esc(creditOf(b))+'</td><td><span class="spill '+b.status+'">'+(STS[b.status]||b.status)+'</span>'+(isLive(b)?'<small class="tsub">'+fmtLeft(dropLeftMs(b))+'</small>':'')+'</td><td class="num">'+kfmt(b.plays)+'</td><td class="num">'+kfmt(b.likes)+'</td><td class="num">'+(sm[b.id]||0)+'</td><td><div class="pact tact">'+a+'</div></td></tr>'}).join('')||'<tr><td colspan="7" class="tsub">Todavía no hay beats.</td></tr>')+'</tbody></table></div>';
 }
 function admProd(){
   var ps=users.filter(function(x){return x.role==='producer'}), sm=sales();
-  return admApps()+'<div class="tblw"><table class="tbl"><thead><tr><th>Productor</th><th class="num">Beats</th><th class="num">Plays</th><th class="num">Likes</th><th class="num">Ventas</th><th></th></tr></thead><tbody>'+
+  return admApps()+'<div class="tblw"><table class="tbl"><thead><tr><th>Productor</th><th class="num">Beats</th><th class="num">Plays</th><th class="num">Likes</th><th class="num">Ventas</th><th>Cuota</th><th></th></tr></thead><tbody>'+
     (ps.map(function(x){var l=ups.filter(function(b){return b.owner===x.email&&b.status!=='rej'});
-      return '<tr><td><div class="who">'+avatarHTML(x)+'<div><b>'+esc(x.name)+'</b><small class="tsub">'+esc(x.mail||'')+'</small></div></div></td><td class="num">'+activeOf(x.email).length+'</td><td class="num">'+kfmt(l.reduce(function(s,b){return s+(b.plays||0)},0))+'</td><td class="num">'+kfmt(l.reduce(function(s,b){return s+(b.likes||0)},0))+'</td><td class="num">'+l.reduce(function(s,b){return s+(sm[b.id]||0)},0)+'</td><td><div class="pact tact"><button class="btn" data-prof="'+esc(x.email)+'">Ver perfil</button><button class="btn" data-udel="'+esc(x.email)+'">Eliminar</button></div></td></tr>'}).join('')||'<tr><td colspan="6" class="tsub">Todavía no hay productores.</td></tr>')+'</tbody></table></div>'+
+      return '<tr><td><div class="who">'+avatarHTML(x)+'<div><b>'+esc(x.name)+'</b><small class="tsub">'+esc(x.mail||'')+'</small></div></div></td><td class="num">'+activeOf(x.email).length+'</td><td class="num">'+kfmt(l.reduce(function(s,b){return s+(b.plays||0)},0))+'</td><td class="num">'+kfmt(l.reduce(function(s,b){return s+(b.likes||0)},0))+'</td><td class="num">'+l.reduce(function(s,b){return s+(sm[b.id]||0)},0)+'</td><td><button class="btn'+(x.plan==='member'?' primary':'')+'" data-plan="'+esc(x.email)+'">'+(x.plan==='member'?'Con cuota':'Sin cuota')+'</button></td><td><div class="pact tact"><button class="btn" data-prof="'+esc(x.email)+'">Ver perfil</button><button class="btn" data-udel="'+esc(x.email)+'">Eliminar</button></div></td></tr>'}).join('')||'<tr><td colspan="6" class="tsub">Todavía no hay productores.</td></tr>')+'</tbody></table></div>'+
     '<div class="card" style="margin-top:20px"><h3>Añadir productor</h3><p class="sub2">Recibirá acceso al panel con su email y esta contraseña</p><div class="fgrid3"><div class="field"><label for="pN">Nombre artístico</label><input id="pN"></div><div class="field"><label for="pE">Email</label><input id="pE" type="email"></div><div class="field"><label for="pP">Contraseña inicial</label><input id="pP" autocomplete="off"></div></div><div class="err" id="pErr" role="alert"></div><button class="btn primary" id="pGo">Añadir productor</button></div>';
 }
 function admSet(){
@@ -2932,19 +2947,19 @@ function shellHTML(u,tabs,sub,badge,role,body){
   return '<div class="adm-shell"><aside class="adm-side"><div class="adm-brand"><img src="'+LOGO+'" alt="Drill Mafia"><div><b>'+(role==='admin'?'Panel oficial':'Panel de productor')+'</b><small>Drill Mafia · Madrid</small></div></div>'+
     '<nav class="adm-nav" aria-label="Secciones del panel">'+tabs.map(function(t){return '<button data-ptab="'+t[0]+'"'+(ptab===t[0]?' aria-current="page"':'')+'><svg viewBox="0 0 24 24" aria-hidden="true">'+IC[t[0]]+'</svg>'+t[1]+(badge[t[0]]?'<span class="pbadge">'+badge[t[0]]+'</span>':'')+'</button>'}).join('')+'</nav>'+
     '<div class="adm-me"><div class="who"><label class="adm-av" for="pAv2" title="Cambiar foto de perfil">'+avatarHTML(u)+'<span aria-hidden="true">Cambiar</span></label><input id="pAv2" type="file" accept="image/*" hidden><div><b>'+esc(u.name)+'</b><small>'+(role==='admin'?'Administración':'Productor')+'</small></div></div><div class="pact"><button class="btn" data-admclose>Ver la web</button><button class="btn" data-out>Salir</button></div></div></aside>'+
-    '<main class="adm-main"><header class="adm-top"><div><h1>'+title+'</h1><p>'+sub[ptab]+'</p></div><div class="adm-tools"><span class="adm-date">'+new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})+'</span><button class="btn" data-admref>Actualizar</button><button class="btn adm-mob" data-admclose>Ver la web</button><button class="btn adm-mob" data-out>Salir</button></div></header><div class="adm-body pbody">'+body+'</div></main></div>';
+    '<main class="adm-main"><header class="adm-top"><div><h1>'+title+'</h1><p>'+sub[ptab]+'</p></div><div class="adm-tools"><span class="adm-date">'+new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})+'</span>'+(role==='admin'?'':'<button class="btn primary" data-copyprof="'+esc(u.email)+'">Copiar enlace de mi perfil</button>')+'<button class="btn" data-admref>Actualizar</button><button class="btn adm-mob" data-admclose>Ver la web</button><button class="btn adm-mob" data-out>Salir</button></div></header><div class="adm-body pbody">'+body+'</div></main></div>';
 }
 function paint(html){var a=admEl(), keep=$('.adm-main',a), st=keep?keep.scrollTop:0, same=a.dataset.tab===ptab;a.innerHTML=html;a.dataset.tab=ptab;if(same){var m=$('.adm-main',a);if(m)m.scrollTop=st}}
 function renderAdmin(u){
   var pendB=ups.filter(function(b){return b.status==='pending'}).length, toShip=ordersC.filter(function(o){return o.status==='paid'&&hasMerch(o)&&!o.shipped_at}).length, nb=books.filter(function(b){return b.status==='paid'&&b.date>=iso(new Date())}).length;
   var owe=PINFOS.length+earn.length?users.filter(function(x){return x.role==='producer'&&dueOf(x.email)>=minPay()}).length:0;
-  var body=ptab==='res'?admRes():ptab==='ord'?admOrd():ptab==='bk'?admBk():ptab==='jobs'?admJobs():ptab==='beats'?admBeats():ptab==='prod'?admProd():ptab==='pay'?admPay():ptab==='merch'?merchAdmin():ptab==='codes'?codesAdmin():ptab==='est'?'<div class="card">'+studioAdmin()+'</div>'+admStudioInfo()+'<div class="card">'+availAdmin()+'</div>':admMe(u)+admMail()+admSet()+admGenres()+admDrops()+admTerms();
+  var body=ptab==='res'?admRes():ptab==='ord'?admOrd():ptab==='bk'?admBk():ptab==='jobs'?admJobs():ptab==='beats'?admBeats():ptab==='prod'?admProd():ptab==='pay'?admPay():ptab==='merch'?merchAdmin():ptab==='codes'?codesAdmin():ptab==='est'?'<div class="card">'+studioAdmin()+'</div>'+admStudioInfo()+'<div class="card">'+availAdmin()+'</div>':admMe(u)+admMail()+admSet()+admMember()+admGenres()+admDrops()+admTerms();
   paint(shellHTML(u,ATABS,ASUB,{ord:toShip,beats:pendB,bk:nb,pay:owe,prod:APPS.length},'admin',body));
 }
 function renderProd(u){
   if(!PTABS.some(function(t){return t[0]===ptab}))ptab='res';
   var mine=ups.filter(function(b){return b.owner===u.email}), used=activeOf(u.email).length;
-  var body=ptab==='res'?prodRes(u,mine):ptab==='mine'?colabsCard()+myDrops(mine)+prodBeats(u,mine.filter(function(b){return b.status!=='drop'&&b.status!=='expired'}),used):ptab==='up'?(function(){var full=used>=slotsN(),avail=!dropUsedToday(u.email);if(UPMODE==='drop'&&!avail&&!full)UPMODE='cat';if(UPMODE==='cat'&&full&&avail)UPMODE='drop';var none=(!avail&&full);return '<div class="card">'+upModeHTML(u,used)+(none?'<div class="empty2"><b>Hoy no puedes subir más</b><p>Ya lanzaste tu drop de hoy y tus huecos están llenos. Mañana tienes otro drop.</p></div>':producerView(u,'up',UPMODE==='drop'?0:used,mine))+'</div>'})():ptab==='earn'?prodEarn():ptab==='pay'?prodPayInfo():ptab==='studio'?prodStudio(u):ptab==='jobs'?prodJobs():'<div class="card">'+profForm(u)+'</div><div class="card"><h3>Tu perfil público</h3><p class="sub2">Compártelo en tus redes para que los artistas escuchen tus beats</p><div class="pact"><button class="btn primary" data-prof="'+esc(u.email)+'">Ver mi perfil</button><button class="btn" data-share="'+esc(u.email)+'">Copiar enlace</button></div></div>';
+  var body=ptab==='res'?prodRes(u,mine):ptab==='mine'?colabsCard()+myDrops(mine)+prodBeats(u,mine.filter(function(b){return b.status!=='drop'&&b.status!=='expired'}),used):ptab==='up'?(function(){var full=used>=slotsN(),avail=!dropUsedToday(u.email);if(UPMODE==='drop'&&!avail&&!full)UPMODE='cat';if(UPMODE==='cat'&&full&&avail)UPMODE='drop';var none=(!avail&&full);return '<div class="card">'+upModeHTML(u,used)+(none?'<div class="empty2"><b>Hoy no puedes subir más</b><p>Ya lanzaste tu drop de hoy y tus huecos están llenos. Mañana tienes otro drop.</p></div>':producerView(u,'up',UPMODE==='drop'?0:used,mine))+'</div>'})():ptab==='earn'?prodEarn():ptab==='pay'?prodPayInfo():ptab==='promo'?prodPromo(u):ptab==='studio'?prodStudio(u):ptab==='jobs'?prodJobs():'<div class="card">'+profForm(u)+'</div><div class="card"><h3>Tu perfil público</h3><p class="sub2">Compártelo en tus redes para que los artistas escuchen tus beats</p><div class="pact"><button class="btn primary" data-prof="'+esc(u.email)+'">Ver mi perfil</button><button class="btn" data-share="'+esc(u.email)+'">Copiar enlace</button></div></div>';
   var low=mine.filter(function(b){var p=beatPerf(b);return p&&p.k==='low'}).length;
   paint(shellHTML(u,PTABS,PSUB,{mine:low+invitesForMe().length,jobs:JOBS.filter(function(j){return j.status==='open'}).length},'producer',body));
 }
@@ -2969,7 +2984,7 @@ function prodBeats(u,mine,used){
   var slots=slotsN();
   return '<div class="card slotcard"><div><h3>Huecos</h3><p class="sub2" style="margin:0">'+used+' de '+slots+' en uso'+(slots>3?' · hueco extra por estar en el top 3':'')+'</p></div><div class="slots big">'+Array.apply(null,{length:slots}).map(function(_,i){return '<i class="'+(i<used?'on':'')+'"></i>'}).join('')+'</div>'+(used<slots?'<button class="btn primary" data-ptab="up">Subir beat</button>':'<span class="tsub">Quita una base para subir otra</span>')+'</div>'+
     '<div class="tblw"><table class="tbl"><thead><tr><th>Beat</th><th>Estado</th><th>Rendimiento</th><th class="num">30 días</th><th class="num">Total</th><th class="num">Likes</th><th class="num">Ventas</th><th></th></tr></thead><tbody>'+
-    (mine.map(function(b){var p=beatPerf(b);return '<tr><td><b>'+esc(b.title)+'</b><small class="tsub">'+b.bpm+' BPM · '+esc(b.key)+' · '+(b.tags||[]).map(tagLabel).map(esc).join(', ')+'</small></td><td><span class="spill '+(b.status==='retired'?'sold':b.status)+'">'+(STS[b.status]||b.status)+'</span></td><td>'+(p?'<span class="spill '+p.c+'" title="'+esc(p.tip)+'">'+p.l+'</span>'+(p.risk?'<small class="tsub warn-txt">Se retira el '+nextFirst()+'</small>':''):'<span class="tsub">—</span>')+'</td><td class="num">'+kfmt(p30(b))+'</td><td class="num">'+kfmt(b.plays)+'</td><td class="num">'+kfmt(b.likes)+'</td><td class="num">'+(sm[b.id]||0)+'</td><td><div class="pact tact">'+(b.status==='ok'?'<button class="btn primary" data-story="'+b.id+'">Historia</button>':'')+colabBtn(b)+'<button class="btn" data-tagedit="'+(tagEdit===b.id?'':b.id)+'">Géneros</button><button class="btn" data-act="del" data-id="'+b.id+'">Quitar</button></div></td></tr>'+(tagEdit===b.id?'<tr class="tagrow"><td colspan="8"><p class="ph2" style="margin-top:0">Géneros de «'+esc(b.title)+'»</p><div class="pills" id="et-'+b.id+'">'+pillsHTML('et',b.tags||[])+'</div>'+genreAdder('et-'+b.id)+'<div class="pact"><button class="btn primary" data-tagsave="'+b.id+'">Guardar géneros</button><button class="btn" data-tagedit="">Cancelar</button></div></td></tr>':'')+(colabEdit===b.id?'<tr class="tagrow"><td colspan="8">'+colabEditor(b)+'</td></tr>':'')}).join('')||'<tr><td colspan="8"><div class="empty2" style="margin:10px 0"><b>Todavía no has subido ningún beat</b><p>Sube tu primera base y el equipo la revisará antes de publicarla.</p><button class="btn primary" data-ptab="up">Subir mi primer beat</button></div></td></tr>')+'</tbody></table></div>';
+    (mine.map(function(b){var p=beatPerf(b);return '<tr><td><b>'+esc(b.title)+'</b><small class="tsub">'+b.bpm+' BPM · '+esc(b.key)+' · '+(b.tags||[]).map(tagLabel).map(esc).join(', ')+'</small></td><td><span class="spill '+(b.status==='retired'?'sold':b.status)+'">'+(STS[b.status]||b.status)+'</span></td><td>'+(p?'<span class="spill '+p.c+'" title="'+esc(p.tip)+'">'+p.l+'</span>'+(p.risk?'<small class="tsub warn-txt">Se retira el '+nextFirst()+'</small>':''):'<span class="tsub">—</span>')+'</td><td class="num">'+kfmt(p30(b))+'</td><td class="num">'+kfmt(b.plays)+'</td><td class="num">'+kfmt(b.likes)+'</td><td class="num">'+(sm[b.id]||0)+'</td><td><div class="pact tact">'+(b.status==='ok'?'<button class="btn" data-copylink="'+b.id+'">Copiar enlace</button><button class="btn primary" data-story="'+b.id+'">Historia</button>':'')+colabBtn(b)+'<button class="btn" data-tagedit="'+(tagEdit===b.id?'':b.id)+'">Géneros</button><button class="btn" data-act="del" data-id="'+b.id+'">Quitar</button></div></td></tr>'+(tagEdit===b.id?'<tr class="tagrow"><td colspan="8"><p class="ph2" style="margin-top:0">Géneros de «'+esc(b.title)+'»</p><div class="pills" id="et-'+b.id+'">'+pillsHTML('et',b.tags||[])+'</div>'+genreAdder('et-'+b.id)+'<div class="pact"><button class="btn primary" data-tagsave="'+b.id+'">Guardar géneros</button><button class="btn" data-tagedit="">Cancelar</button></div></td></tr>':'')+(colabEdit===b.id?'<tr class="tagrow"><td colspan="8">'+colabEditor(b)+'</td></tr>':'')}).join('')||'<tr><td colspan="8"><div class="empty2" style="margin:10px 0"><b>Todavía no has subido ningún beat</b><p>Sube tu primera base y el equipo la revisará antes de publicarla.</p><button class="btn primary" data-ptab="up">Subir mi primer beat</button></div></td></tr>')+'</tbody></table></div>';
 }
 function prodEarn(){
   var pend=earn.filter(function(e){return e.status==='pending'}).reduce(function(s,e){return s+Number(e.amount)},0), paid=payoutsC.reduce(function(s,p){return s+Number(p.amount)},0), mn=minPay();
@@ -3284,7 +3299,7 @@ function myDrops(mine){
     (l.length?l.map(function(b){
       var live=isLive(b), left=dropLeftMs(b), del=left+DROPCFG.grace_hours*36e5, ok=(b.plays||0)>=need||sm[b.id]>0, pct=Math.min(100,Math.round((b.plays||0)/need*100));
       var st=b.status==='expired'?'<span class="spill sold">Archivado (vendido)</span>':live?'<span class="spill ok">En directo · '+fmtLeft(left)+'</span>':'<span class="spill pending">Terminado · se borra en '+Math.max(1,Math.ceil(del/36e5))+' h</span>';
-      var act=b.status==='drop'?(live?'<button class="btn" data-story="'+b.id+'">Historia</button>':'')+colabBtn(b)+'<button class="btn'+(ok&&free?' primary':'')+'" data-promote="'+b.id+'"'+(ok&&free?'':' disabled')+'>Pasar al catálogo</button>':'';
+      var act=b.status==='drop'?(live?'<button class="btn" data-copylink="'+b.id+'">Copiar enlace</button><button class="btn" data-story="'+b.id+'">Historia</button>':'')+colabBtn(b)+'<button class="btn'+(ok&&free?' primary':'')+'" data-promote="'+b.id+'"'+(ok&&free?'':' disabled')+'>Pasar al catálogo</button>':'';
       return '<div class="drow"><div class="drow-main"><b>'+esc(b.title)+'</b><small>'+st+' · '+kfmt(b.plays)+' escuchas · '+kfmt(b.likes)+' me gusta · '+(sm[b.id]||0)+' ventas</small>'+
         (b.status==='drop'?'<div class="dbar" title="'+(b.plays||0)+' de '+need+' escuchas"><i style="width:'+(sm[b.id]?100:pct)+'%"></i></div><small class="tsub">'+(ok?(free?'¡Lo ha conseguido! Ya puedes pasarlo a tu catálogo.':'Lo ha conseguido, pero tus huecos están llenos: quita una base para pasarlo.'):(b.plays||0)+' de '+need+' escuchas para poder quedártelo')+'</small>':'')+
         '</div><div class="pact tact">'+act+'</div></div>'+(colabEdit===b.id?colabEditor(b):'')}).join(''):'<p class="note" style="margin:0">Todavía no has lanzado ningún drop. '+(dropUsedToday(me)?'':'<button class="btn primary" data-ptab="up" style="margin-left:8px">Lanzar el de hoy</button>')+'</p>')+'</div>';
@@ -3544,7 +3559,7 @@ function prodStudio(u){
   var s=u.studio||{}, av=s.avail||{}, dm=TERMS&&TERMS.studio_dm!=null?+TERMS.studio_dm:30;
   var rows=[1,2,3,4,5,6,7].map(function(d){var a=av[d];return '<tr><td><label class="chk" style="margin:0"><input type="checkbox" data-pday="'+d+'"'+(a?' checked':'')+'> <span>'+DOWN[d]+'</span></label></td><td><select data-pfrom="'+d+'"'+(a?'':' disabled')+'>'+hourOpts(a?a[0]:ST.open,ST.open,ST.close-1)+'</select></td><td><select data-pto="'+d+'"'+(a?'':' disabled')+'>'+hourOpts(a?a[1]:ST.close,ST.open+1,ST.close)+'</select></td></tr>'}).join('');
   var up=MYBOOKS.filter(function(b){return b.d>=iso(new Date())}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:a.h-b.h});
-  return '<div class="card"><h3>Sesiones en el estudio</h3><p class="sub2">Los artistas podrán reservar el estudio contigo en los horarios que marques. Drill Mafia pone las instalaciones y se queda el '+dm+' % de lo que se cobra; el resto es para ti y lo ves en Ganancias.</p>'+
+  return '<div class="card"><h3>Sesiones en el estudio</h3><p class="sub2">Los artistas podrán reservar el estudio contigo en los horarios que marques. '+(u.plan==='member'?'Como tienes cuota, todo lo que se cobre de tus sesiones es para ti y lo ves en Ganancias.':'Drill Mafia pone las instalaciones y se queda el '+dm+' % de lo que se cobra; el resto es para ti y lo ves en Ganancias.')+'</p>'+
     '<label class="chk"><input type="checkbox" id="psOn"'+(s.on?' checked':'')+'> <span><b>Ofrezco sesiones en el estudio</b></span></label>'+
     '<div class="fgrid"><div class="field"><label for="psRate">Tu precio por hora (€)</label><input id="psRate" type="number" min="1" step="1" value="'+(s.rate||'')+'" placeholder="Por ejemplo, 50"></div></div>'+
     '<p class="ph2">Disponibilidad semanal</p><table class="tbl avtbl"><thead><tr><th>Día</th><th>Desde</th><th>Hasta</th></tr></thead><tbody>'+rows+'</tbody></table>'+
@@ -3665,6 +3680,165 @@ document.addEventListener('change',function(e){
 
 /* aviso si la web no ha podido conectar con el servidor */
 if(LIVE&&!sb){var nb=document.createElement('div');nb.className='netbar';nb.setAttribute('role','alert');nb.innerHTML='No hemos podido conectar con el servidor de Drill Mafia: no podrás reservar ni comprar. Recarga la página o desactiva el bloqueador de anuncios para esta web. <button onclick="location.reload()">Recargar</button>';document.body.prepend(nb)}
+
+
+/* =====================================================================
+   MARKETING DE PRODUCTORES · CUOTA · CALENDARIOS DE GOOGLE
+   ===================================================================== */
+var MEMBERCFG={hours:20,open:9,close:22,fee:150}, MYCODES=[], CALSRC=null, PBUSY=[];
+var FEED_BASE='https://insfoiksyykkbgstimah.supabase.co/functions/v1/cal-feed?t=';
+STS.member='Productor (cuota)';
+function todayIso(){return iso(new Date())}
+function offerPct(u,kind){var o=(u&&u.offer)||{};if(!o[kind]||!(+o.pct>0))return 0;if(o.until&&o.until<todayIso())return 0;return Math.min(50,+o.pct)}
+function ownerOf(b){return b&&b.owner?users.filter(function(x){return x.email===b.owner})[0]:null}
+function bpriceBase(id,tier){var b=beatById(id),u=ownerOf(b);if(u&&u.prices&&u.prices[tier]>0)return u.prices[tier];return tierById(tier).price}
+function bprice(id,tier){var p=bpriceBase(id,tier),pc=offerPct(ownerOf(beatById(id)),'beats');return pc?Math.round(p*(100-pc))/100:p}
+function priceHTML(b){var pc=offerPct(ownerOf(b),'beats');return 'desde '+(pc?'<s class="was">'+eur.format(bpriceBase(b.id,'mp3'))+'</s> ':'')+'<b>'+eur.format(bprice(b.id,'mp3'))+'</b>'+(pc?' <span class="offtag">−'+pc+' %</span>':'')}
+function prodBusy(email,d,s,dur){return PBUSY.some(function(x){return x.producer===email&&x.d===d&&s*60<x.e&&x.s<(s+dur)*60})}
+function weekStart(dIso){var d=new Date(dIso+'T12:00:00'),w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return iso(d)}
+function memberUsed(dIso){var ws=weekStart(dIso),we=new Date(ws+'T12:00:00');we.setDate(we.getDate()+7);var weIso=iso(we);return MYBOOKS.filter(function(b){return b.status==='member'&&b.d>=ws&&b.d<weIso}).reduce(function(s,b){return s+b.dur},0)}
+
+/* ---------- reservas: hueco del productor según su Google Calendar, ofertas y códigos ---------- */
+bk.code=bk.code||''; bk.cpct=bk.cpct||0;
+var _renderBook=renderBook;
+renderBook=function(){
+  _renderBook();
+  var P=bk.prod?studioProds().filter(function(u){return u.email===bk.prod})[0]:null;
+  // ofertas en las tarjetas de productor
+  $$('#bookBody [data-bkprod]').forEach(function(x){var u=studioProds().filter(function(z){return z.email===x.dataset.bkprod})[0],pc=offerPct(u,'studio');if(pc)x.insertAdjacentHTML('beforeend','<span class="offtag">−'+pc+' %</span>')});
+  if(!P)return;
+  // horas ocupadas en el calendario del productor
+  $$('#bookBody [data-bs]').forEach(function(x){if(prodBusy(P.email,bk.date,+x.dataset.bs,bk.dur)){x.disabled=true;if(bk.start===+x.dataset.bs)bk.start=null}});
+  // código del productor
+  var pc=Math.max(offerPct(P,'studio'),bk.cpct||0), rate=+P.studio.rate, tot=rate*bk.dur, fin=Math.round(tot*(100-pc))/100;
+  var t=$('#bookBody .bk-total'); if(t)t.outerHTML='<div class="field bkcode"><label for="bkCode">¿Tienes un código de '+esc(P.name)+'?</label><div class="gadd" style="margin:0"><input id="bkCode" value="'+esc(bk.code)+'" placeholder="CÓDIGO" autocomplete="off"><button class="btn" id="bkCodeGo" type="button">Aplicar</button></div><p class="tsub" id="bkCodeMsg">'+(bk.cpct?'Código aplicado: −'+bk.cpct+' %':'')+'</p></div><div class="bk-total"><span>Total'+(pc?' · −'+pc+' %':'')+'</span><b>'+(pc?'<s class="was">'+eur.format(tot)+'</s> ':'')+eur.format(fin)+'</b></div>';
+  var n=$('#bookBody .note'); if(n&&sb)n.textContent='Para confirmar pagas ahora el 50 % ('+eur.format(fin/2)+') y el resto en el estudio. La dirección te llega por email al confirmar la reserva.';
+};
+cloudBook=function(){
+  var n=bk.name.trim(), em=bk.email.trim().toLowerCase(), btn=$('#bkGo');
+  btn.disabled=true; btn.textContent='Redirigiendo a Stripe…';
+  sb.functions.invoke('create-checkout',{body:{kind:'booking',date:bk.date,start:bk.start,dur:bk.dur,name:n,email:em,producer:bk.prod||null,code:bk.prod&&bk.cpct?bk.code:null}}).then(function(r){
+    var d=r.data||{};
+    if(!d.url){var e=d.error||'';return refreshBusy().then(function(){bk.start=null;renderBook();$('#bkErr').textContent=/slot_taken/.test(e)?'Ese horario acaba de ocuparse. Elige otro.':/producer_unavailable|no_producer/.test(e)?'El productor no está disponible en ese horario.':/bad_code/.test(e)?'El código ya no es válido.':/stripe/.test(e)?'El sistema de pagos no está disponible ahora mismo. Inténtalo en un rato.':'No se pudo iniciar el pago. Inténtalo de nuevo.'})}
+    location.href=d.url;
+  });
+};
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#bkCodeGo'))return;
+  bkFields(); var c=($('#bkCode').value||'').trim().toUpperCase(), m=$('#bkCodeMsg');
+  if(!c){bk.code='';bk.cpct=0;renderBook();return}
+  sb.rpc('check_producer_code',{p_code:c,p_producer:bk.prod}).then(function(r){if(r.error||!r.data){bk.cpct=0;bk.code=c;renderBook();$('#bkCodeMsg').textContent='Ese código no existe o ha caducado.';return}bk.code=c;bk.cpct=+r.data;renderBook()});
+});
+document.addEventListener('click',function(e){if(e.target.closest('[data-bkprod]')){bk.code='';bk.cpct=0}},true);
+
+/* ---------- panel del productor: Promociones ---------- */
+IC.promo='<path d="M3 11l18-8-8 18-2-8-8-2z"/>';
+PTABS.splice(PTABS.length-1,0,['promo','Promociones']); PSUB.promo='Ofertas y códigos de descuento para que te reserven y te compren';
+function prodPromo(u){
+  var o=u.offer||{}, act=offerPct(u,'beats')||offerPct(u,'studio');
+  return '<div class="card"><h3>Oferta</h3><p class="sub2">Anuncia un descuento en tus beats o en tus sesiones de estudio. Sale destacado en la web con el precio tachado. Máximo 50 %.</p>'+
+    (act?'<p class="ok-line">Oferta activa: −'+o.pct+' %'+(o.until?' hasta el '+fdate(o.until+'T12:00:00',{day:'numeric',month:'long'}):'')+'</p>':'')+
+    '<div class="fgrid"><div class="field"><label for="ofP">Descuento (%)</label><input id="ofP" type="number" min="0" max="50" step="5" value="'+(o.pct||'')+'" placeholder="Por ejemplo, 20"></div><div class="field"><label for="ofU">Hasta (opcional)</label><input id="ofU" type="date" value="'+esc(o.until||'')+'"></div></div>'+
+    '<label class="chk"><input type="checkbox" id="ofB"'+(o.beats?' checked':'')+'> <span>En mis beats</span></label><label class="chk"><input type="checkbox" id="ofS"'+(o.studio?' checked':'')+'> <span>En mis sesiones de estudio</span></label>'+
+    '<div class="err" id="ofErr" role="alert"></div><div class="pact"><button class="btn primary" id="ofSave">Guardar oferta</button>'+(o.pct?'<button class="btn" id="ofOff">Quitar oferta</button>':'')+'</div></div>'+
+    '<div class="card"><h3>Códigos de descuento para tus sesiones</h3><p class="sub2">Crea códigos para que tus artistas te reserven más barato. Compártelos en tus historias o por mensaje. Máximo 50 %; si hay oferta y código, se aplica el mayor.</p>'+
+    '<div class="fgrid3"><div class="field"><label for="pcC">Código</label><input id="pcC" maxlength="20" placeholder="MEMO20"></div><div class="field"><label for="pcP">Descuento (%)</label><input id="pcP" type="number" min="5" max="50" step="5" value="20"></div><div class="field"><label for="pcM">Usos máximos (opcional)</label><input id="pcM" type="number" min="1" placeholder="Sin límite"></div></div><div class="fgrid"><div class="field"><label for="pcU">Válido hasta (opcional)</label><input id="pcU" type="date"></div></div>'+
+    '<div class="err" id="pcErr" role="alert"></div><button class="btn primary" id="pcGo">Crear código</button>'+
+    (MYCODES.length?'<table class="tbl" style="margin-top:18px"><thead><tr><th>Código</th><th class="num">Descuento</th><th class="num">Usos</th><th>Hasta</th><th>Estado</th><th></th></tr></thead><tbody>'+MYCODES.map(function(c){return '<tr><td><b>'+esc(c.code)+'</b></td><td class="num">−'+(+c.pct)+' %</td><td class="num">'+c.uses+(c.max_uses?' / '+c.max_uses:'')+'</td><td>'+(c.until?fdate(c.until+'T12:00:00',{day:'numeric',month:'short'}):'—')+'</td><td><span class="spill '+(c.active?'ok':'sold')+'">'+(c.active?'Activo':'Pausado')+'</span></td><td><div class="pact tact"><button class="btn" data-pccopy="'+esc(c.code)+'" data-pcpct="'+(+c.pct)+'">Copiar mensaje</button><button class="btn" data-pctog="'+esc(c.code)+'">'+(c.active?'Pausar':'Activar')+'</button><button class="btn" data-pcdel="'+esc(c.code)+'">Borrar</button></div></td></tr>'}).join('')+'</tbody></table>':'')+'</div>';
+}
+document.addEventListener('click',function(e){
+  var t=e.target,x,u=who();
+  if(t.closest('#ofSave')||t.closest('#ofOff')){
+    var off=!!t.closest('#ofOff'), v=off?{}:{pct:Math.round(+$('#ofP').value||0),beats:$('#ofB').checked,studio:$('#ofS').checked,until:$('#ofU').value||null};
+    if(!off){if(!(v.pct>=5&&v.pct<=50))return $('#ofErr').textContent='El descuento tiene que estar entre 5 y 50 %.';if(!v.beats&&!v.studio)return $('#ofErr').textContent='Marca si es para tus beats, tus sesiones o ambos.'}
+    sb.from('profiles').update({offer:v}).eq('id',me).then(function(r){if(r.error)return fail(r.error);u.offer=v;renderPanel();renderList();renderStudioInfo();toast(off?'Oferta quitada':'Oferta publicada')});return;
+  }
+  if(t.closest('#pcGo')){
+    var v2={code:($('#pcC').value||'').trim().toUpperCase(),pct:+$('#pcP').value,max_uses:+$('#pcM').value||null,until:$('#pcU').value||null,producer:me};
+    if(!/^[A-Z0-9_-]{3,20}$/.test(v2.code))return $('#pcErr').textContent='El código tiene que tener de 3 a 20 letras o números, sin espacios.';
+    if(!(v2.pct>=5&&v2.pct<=50))return $('#pcErr').textContent='El descuento tiene que estar entre 5 y 50 %.';
+    sb.from('producer_codes').insert(v2).then(function(r){if(r.error)return $('#pcErr').textContent=/duplicate|unique/.test(r.error.message)?'Ese código ya existe. Prueba otro.':r.error.message;MYCODES.unshift(Object.assign({uses:0,active:true},v2));renderPanel();toast('Código creado')});return;
+  }
+  if((x=t.closest('[data-pctog]'))){var c=MYCODES.filter(function(z){return z.code===x.dataset.pctog})[0];sb.from('producer_codes').update({active:!c.active}).eq('code',c.code).then(function(r){if(r.error)return fail(r.error);c.active=!c.active;renderPanel()});return}
+  if((x=t.closest('[data-pcdel]'))){if(!confirm('¿Borrar el código '+x.dataset.pcdel+'?'))return;sb.from('producer_codes').delete().eq('code',x.dataset.pcdel).then(function(r){if(r.error)return fail(r.error);MYCODES=MYCODES.filter(function(z){return z.code!==x.dataset.pcdel});renderPanel()});return}
+  if((x=t.closest('[data-pccopy]'))){var msg='Reserva conmigo en el estudio de Drill Mafia con el código '+x.dataset.pccopy+' y llévate un '+x.dataset.pcpct+' % de descuento 🔥 '+location.origin+location.pathname+'#p='+me;(navigator.clipboard?navigator.clipboard.writeText(msg):Promise.reject()).then(function(){toast('Mensaje copiado')}).catch(function(){prompt('Copia el mensaje:',msg)})}
+});
+
+/* ---------- panel del productor: Google Calendar, enlace de reservas y cuota ---------- */
+function calCard(src,mine){
+  var feed=src&&src.feed_token?FEED_BASE+src.feed_token:'';
+  return '<div class="card"><h3>'+(mine?'Tu Google Calendar':'Google Calendar del estudio')+'</h3><p class="sub2">'+(mine?'Conecta tu calendario y las horas que tengas ocupadas desaparecerán de las reservas contigo. Se actualiza solo cada 15 minutos.':'Las horas ocupadas en este calendario no se pueden reservar en el estudio. Se actualiza solo cada 15 minutos.')+'</p>'+
+    '<details class="si-rules" style="margin-bottom:12px"><summary>Cómo encontrar la dirección</summary><ul><li>Abre Google Calendar en el ordenador.</li><li>En la lista de la izquierda, pasa el ratón por tu calendario, pulsa los tres puntos y entra en <b>Configuración y uso compartido</b>.</li><li>Baja hasta <b>Integrar el calendario</b> y copia la <b>Dirección secreta en formato iCal</b> (termina en <code>basic.ics</code>).</li></ul></details>'+
+    '<div class="field"><label for="calUrl">Dirección secreta en formato iCal</label><input id="calUrl" type="url" value="'+esc(src&&src.url||'')+'" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"></div>'+
+    '<div class="err" id="calErr" role="alert"></div><div class="pact"><button class="btn primary" id="calSave" data-mine="'+(mine?1:0)+'">Guardar y sincronizar</button>'+(src&&src.url?'<button class="btn" id="calRun" data-mine="'+(mine?1:0)+'">Sincronizar ahora</button>':'')+'</div>'+
+    (src&&src.last_sync?'<p class="'+(src.last_error?'warn-line':'ok-line')+'" style="margin-top:12px">'+(src.last_error?'Error: '+esc(src.last_error):'Sincronizado · '+(src.events||0)+' franjas ocupadas')+' · '+fdate(src.last_sync,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'</p>':'')+
+    '<p class="ph2" style="margin-top:18px">'+(mine?'Ver tus sesiones en tu Google Calendar':'Ver todas las reservas en Google Calendar')+'</p>'+
+    (feed?'<div class="gadd" style="margin:0"><input readonly value="'+esc(feed)+'" id="feedUrl"><button class="btn" id="feedCopy">Copiar</button></div><p class="tsub">En Google Calendar: <b>Otros calendarios → + → Desde URL</b> y pega el enlace. Google lo actualiza por su cuenta cada pocas horas; las reservas en la web se bloquean al momento igualmente.</p>':'<button class="btn" id="feedOn" data-mine="'+(mine?1:0)+'">Crear mi enlace de calendario</button>')+'</div>';
+}
+function memberCard(u){
+  var used=memberUsed(todayIso()), left=Math.max(0,MEMBERCFG.hours-used), mine=MYBOOKS.filter(function(b){return b.status==='member'&&b.d>=todayIso()}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:a.h-b.h});
+  var days='';for(var i=0;i<14;i++){var d=new Date();d.setDate(d.getDate()+i);var k=iso(d);days+='<option value="'+k+'">'+d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})+'</option>'}
+  var hrs='';for(var h=MEMBERCFG.open;h<MEMBERCFG.close;h++)hrs+='<option value="'+h+'">'+h+':00</option>';
+  return '<div class="card mcard2"><h3>Tu cuota · estudio para ti</h3><p class="sub2">Con tu cuota puedes usar el estudio hasta '+MEMBERCFG.hours+' horas a la semana, de '+MEMBERCFG.open+':00 a '+MEMBERCFG.close+':00, siempre que esté libre. Todo lo que generes con tus beats y tus sesiones es para ti.</p>'+
+    '<div class="mbar"><div><b>'+used+' h</b> usadas esta semana · quedan <b>'+left+' h</b></div><div class="dbar" style="max-width:none"><i style="width:'+Math.min(100,used/MEMBERCFG.hours*100)+'%"></i></div></div>'+
+    '<div class="fgrid3"><div class="field"><label for="mbD">Día</label><select id="mbD">'+days+'</select></div><div class="field"><label for="mbH">Desde</label><select id="mbH">'+hrs+'</select></div><div class="field"><label for="mbL">Horas</label><input id="mbL" type="number" min="1" max="'+Math.max(1,Math.min(left,MEMBERCFG.close-MEMBERCFG.open))+'" value="'+Math.min(2,Math.max(1,left))+'"></div></div>'+
+    '<div class="err" id="mbErr" role="alert"></div><button class="btn primary" id="mbGo"'+(left?'':' disabled')+'>Reservar para mí</button>'+
+    (mine.length?'<table class="tbl" style="margin-top:16px"><thead><tr><th>Día</th><th>Horario</th><th></th></tr></thead><tbody>'+mine.map(function(b){return '<tr><td><b>'+fdate(b.d+'T12:00:00',{weekday:'short',day:'numeric',month:'short'})+'</b></td><td>'+b.h+':00 – '+(b.h+b.dur)+':00</td><td><div class="pact tact"><button class="btn" data-mbcancel="'+b.id+'">Cancelar</button></div></td></tr>'}).join('')+'</tbody></table>':'')+'</div>';
+}
+var _prodStudio=prodStudio;
+prodStudio=function(u){return (u.plan==='member'?memberCard(u):'')+_prodStudio(u)+calCard(CALSRC,true)};
+function saveCal(mine,url){
+  var row=mine?{owner:me,url:url}:{owner:null,url:url}, cur=mine?CALSRC:STUDIOCAL;
+  return (cur&&cur.id?sb.from('cal_sources').update({url:url}).eq('id',cur.id).select().single():sb.from('cal_sources').insert(row).select().single()).then(function(r){if(r.error)throw r.error;if(mine)CALSRC=r.data;else STUDIOCAL=r.data;return r.data});
+}
+function runCal(mine){
+  var el=$('#calErr'); if(el)el.textContent='Sincronizando con Google…';
+  return sb.functions.invoke('sync-calendar',{body:{scope:mine?'mine':'studio'}}).then(function(r){var d=r.data||{};var m=d.error||(r.error&&r.error.message);
+    return sb.from('cal_sources').select('*').eq(mine?'owner':'id',mine?me:(STUDIOCAL&&STUDIOCAL.id)).maybeSingle().then(function(x){if(x.data){if(mine)CALSRC=x.data;else STUDIOCAL=x.data}
+      if(m){renderPanel();var e2=$('#calErr');if(e2)e2.textContent='No se pudo sincronizar: '+m;return}
+      toast((d.count||0)+' franjas ocupadas sincronizadas');return loadPBusy().then(refreshBusy)})});
+}
+function loadPBusy(){return sb.from('producer_busy').select('*').gte('d',todayIso()).then(function(r){if(!r.error)PBUSY=r.data||[]})}
+var STUDIOCAL=null;
+function calAdmin(){return calCard(STUDIOCAL,false)}
+document.addEventListener('click',function(e){
+  var t=e.target,x;
+  if((x=t.closest('#calSave'))){var mine=x.dataset.mine==='1', url=$('#calUrl').value.trim();
+    if(!/^https:\/\/.+/.test(url)||!/ical|\.ics/.test(url))return $('#calErr').textContent='Pega la «Dirección secreta en formato iCal» (empieza por https:// y termina en .ics).';
+    x.disabled=true; saveCal(mine,url).then(function(){return runCal(mine)}).catch(fail).then(function(){x.disabled=false});return}
+  if((x=t.closest('#calRun'))){runCal(x.dataset.mine==='1');return}
+  if((x=t.closest('#feedOn'))){var m2=x.dataset.mine==='1';saveCal(m2,(m2?CALSRC:STUDIOCAL)?((m2?CALSRC:STUDIOCAL).url||''):'').then(function(){renderPanel()}).catch(fail);return}
+  if(t.closest('#feedCopy')){var i=$('#feedUrl');(navigator.clipboard?navigator.clipboard.writeText(i.value):Promise.reject()).then(function(){toast('Enlace copiado')}).catch(function(){i.select();document.execCommand('copy')});return}
+  if(t.closest('#mbGo')){var d=$('#mbD').value,h=+$('#mbH').value,l=+$('#mbL').value,er=$('#mbErr');
+    if(!(l>=1))return er.textContent='Indica cuántas horas.';
+    if(h+l>MEMBERCFG.close)return er.textContent='El estudio cierra a las '+MEMBERCFG.close+':00.';
+    if(clash(d,h,l))return er.textContent='Esas horas ya están ocupadas en el estudio.';
+    sb.rpc('member_book',{p_date:d,p_start:h,p_dur:l}).then(function(r){if(r.error){var m=r.error.message;return er.textContent=/week_limit/.test(m)?'Te pasarías de tus '+MEMBERCFG.hours+' horas de esta semana.':/slot_taken/.test(m)?'Esas horas ya están ocupadas.':/not_member/.test(m)?'Tu cuota no está activa. Habla con Drill Mafia.':'No se pudo reservar.'}toast('Estudio reservado para ti');return cloudInit()});return}
+  if((x=t.closest('[data-mbcancel]'))){if(!confirm('¿Cancelar esta reserva del estudio?'))return;sb.rpc('member_cancel',{p_id:+x.dataset.mbcancel}).then(function(r){if(r.error)return fail(r.error);toast('Reserva cancelada');return cloudInit()})}
+});
+
+/* ---------- admin: cuota de productores ---------- */
+function admMember(){
+  var c=MEMBERCFG;
+  return '<div class="card"><h3>Cuota de productores</h3><p class="sub2">Los productores con cuota se llevan el 100 % de sus beats y sesiones, y pueden usar el estudio para ellos. Actívala en Productores.</p><div class="fgrid"><div class="field"><label for="mcH">Horas por semana</label><input id="mcH" type="number" min="1" value="'+c.hours+'"></div><div class="field"><label for="mcF">Cuota mensual (€)</label><input id="mcF" type="number" min="0" value="'+c.fee+'"></div><div class="field"><label for="mcO">Desde (hora)</label><input id="mcO" type="number" min="0" max="23" value="'+c.open+'"></div><div class="field"><label for="mcC">Hasta (hora)</label><input id="mcC" type="number" min="1" max="24" value="'+c.close+'"></div></div><button class="btn primary" id="mcSave">Guardar</button></div>';
+}
+document.addEventListener('click',function(e){
+  var t=e.target,x;
+  if(t.closest('#mcSave')){var v={hours:+$('#mcH').value||20,fee:+$('#mcF').value||0,open:+$('#mcO').value||9,close:+$('#mcC').value||22};if(v.close<=v.open)return toast('La hora de cierre tiene que ser mayor que la de apertura');sb.from('settings').upsert({key:'member',value:v}).then(function(r){if(r.error)return fail(r.error);MEMBERCFG=v;toast('Cuota guardada')});return}
+  if((x=t.closest('[data-plan]'))){var u=users.filter(function(z){return z.email===x.dataset.plan})[0];if(!u)return;var np=u.plan==='member'?'standard':'member';
+    if(!confirm(np==='member'?'¿Activar la cuota de '+u.name+'? Se llevará el 100 % de sus ventas y sesiones y podrá reservar el estudio para él.':'¿Quitar la cuota de '+u.name+'? Volverá al reparto normal.'))return;
+    sb.from('profiles').update({plan:np}).eq('id',u.email).then(function(r){if(r.error)return fail(r.error);u.plan=np;renderPanel();toast(np==='member'?'Cuota activada':'Cuota quitada')})}
+});
+
+
+/* ---------- copiar enlaces rápidos (beat y perfil) ---------- */
+function copyText(txt,ok){(navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(function(){toast(ok)}).catch(function(){prompt('Copia el enlace:',txt)})}
+document.addEventListener('click',function(e){
+  var x=e.target.closest('[data-copylink],[data-copyprof]'); if(!x)return;
+  e.preventDefault();
+  if(x.dataset.copylink){var b=anyBeat(+x.dataset.copylink);copyText(beatUrl(+x.dataset.copylink),'Enlace de «'+(b?b.title:'tu beat')+'» copiado')}
+  else copyText(profUrl(x.dataset.copyprof),'Enlace de tu perfil copiado');
+});
 
 /* init */
 $$('[data-logo]').forEach(function(i){i.src=LOGO});
