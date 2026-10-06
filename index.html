@@ -918,6 +918,24 @@ body:has(.adm:not([hidden])) .ring{display:none!important}
 .avtbl{max-width:520px;margin:6px 0 14px}.avtbl select{background:#0B0C0F;border:1px solid var(--line);border-radius:6px;color:var(--ink);padding:6px 8px;font:inherit}
 .avtbl select:disabled{opacity:.35}
 .col-tag{position:absolute;bottom:10px;left:10px;background:rgba(255,255,255,.92);color:#000;border-radius:99px;padding:3px 9px;font:700 .68rem var(--body)}
+
+/* cola de trabajo */
+.jhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.jtools{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.jtools select{background:#0B0C0F;border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:8px 10px;font:inherit;font-size:.88rem}
+.jnew{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.job.closed{opacity:.72}
+.job-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.job-id{min-width:0;flex:1}.job-id b{display:block;font-size:1rem}.job-id small{color:var(--mute);font-size:.82rem}
+.jsteps{display:flex;gap:8px;margin:14px 0 4px;flex-wrap:wrap}
+.jstep{border:1px dashed var(--line);border-radius:99px;padding:5px 12px;font-size:.8rem;color:var(--mute)}
+.jstep.done{border-style:solid;border-color:#fff;color:#fff;background:#15171C}
+.jdl{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.jdl>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:.85rem}
+.jf{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}
+.jup{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.jfn{flex:1;min-width:160px}
+.jkind{display:flex;gap:14px;font-size:.9rem}.jkind label{display:flex;align-items:center;gap:6px;cursor:pointer}.jkind input{accent-color:#fff}
 </style>
 
 </head>
@@ -2406,6 +2424,8 @@ async function loadAll(){
     PINFOS=R(await sb.from('payout_info').select('*'));
     APPS=R(await sb.from('profiles').select('*').eq('role','pending').order('created_at',{ascending:false}));
     SPLITS=R(await sb.from('beat_splits').select('*'));
+    JOBS=R(await sb.from('jobs').select('*').order('created_at',{ascending:false}));
+    DELIVS=R(await sb.from('deliveries').select('*'));
     var tm=await sb.rpc('my_terms');TERMS=tm.data||null;
   }else{books=[];codes=codes.filter(function(c){return c._chk});icalUrl='';earn=[];payoutsC=[];PINFO=null;PERF=null;
     if(mine&&mine.role==='producer'){
@@ -2417,6 +2437,8 @@ async function loadAll(){
       playsD=R(await sb.from('beat_plays_daily').select('*').gte('d',iso(new Date(Date.now()-30*864e5))));
       SPLITS=R(await sb.from('beat_splits').select('*'));
       MYBOOKS=R(await sb.from('bookings').select('*').eq('producer',me).neq('status','cancelled'));
+      JOBS=R(await sb.from('jobs').select('*').eq('producer',me).order('created_at',{ascending:false}));
+      DELIVS=R(await sb.from('deliveries').select('*').eq('producer',me));
     }
   }
 }
@@ -2843,7 +2865,7 @@ function admSet(){
 function renderAdminOld(u){
   var a=admEl(), pendB=ups.filter(function(b){return b.status==='pending'}).length, toShip=ordersC.filter(function(o){return o.status==='paid'&&hasMerch(o)&&!o.shipped_at}).length, nb=books.filter(function(b){return b.status==='paid'&&b.date>=iso(new Date())}).length;
   var badge={ord:toShip,beats:pendB,bk:nb}, title=(ATABS.filter(function(t){return t[0]===ptab})[0]||ATABS[0])[1];
-  var body=ptab==='res'?admRes():ptab==='ord'?admOrd():ptab==='bk'?admBk():ptab==='beats'?admBeats():ptab==='prod'?admProd():ptab==='merch'?merchAdmin():ptab==='codes'?codesAdmin():ptab==='est'?'<div class="card">'+studioAdmin()+'</div>'+admStudioInfo()+'<div class="card">'+availAdmin()+'</div>':admSet();
+  var body=ptab==='res'?admRes():ptab==='ord'?admOrd():ptab==='bk'?admBk():ptab==='jobs'?admJobs():ptab==='beats'?admBeats():ptab==='prod'?admProd():ptab==='merch'?merchAdmin():ptab==='codes'?codesAdmin():ptab==='est'?'<div class="card">'+studioAdmin()+'</div>'+admStudioInfo()+'<div class="card">'+availAdmin()+'</div>':admSet();
   var keep=$('.adm-main',a), st=keep?keep.scrollTop:0, same=a.dataset.tab===ptab;
   a.innerHTML='<div class="adm-shell"><aside class="adm-side"><div class="adm-brand"><img src="'+LOGO+'" alt="Drill Mafia"><div><b>Panel oficial</b><small>Drill Mafia · Madrid</small></div></div>'+
     '<nav class="adm-nav" aria-label="Secciones del panel">'+ATABS.map(function(t){return '<button data-ptab="'+t[0]+'"'+(ptab===t[0]?' aria-current="page"':'')+'><svg viewBox="0 0 24 24" aria-hidden="true">'+IC[t[0]]+'</svg>'+t[1]+(badge[t[0]]?'<span class="pbadge">'+badge[t[0]]+'</span>':'')+'</button>'}).join('')+'</nav>'+
@@ -2912,15 +2934,15 @@ function paint(html){var a=admEl(), keep=$('.adm-main',a), st=keep?keep.scrollTo
 function renderAdmin(u){
   var pendB=ups.filter(function(b){return b.status==='pending'}).length, toShip=ordersC.filter(function(o){return o.status==='paid'&&hasMerch(o)&&!o.shipped_at}).length, nb=books.filter(function(b){return b.status==='paid'&&b.date>=iso(new Date())}).length;
   var owe=PINFOS.length+earn.length?users.filter(function(x){return x.role==='producer'&&dueOf(x.email)>=minPay()}).length:0;
-  var body=ptab==='res'?admRes():ptab==='ord'?admOrd():ptab==='bk'?admBk():ptab==='beats'?admBeats():ptab==='prod'?admProd():ptab==='pay'?admPay():ptab==='merch'?merchAdmin():ptab==='codes'?codesAdmin():ptab==='est'?'<div class="card">'+studioAdmin()+'</div>'+admStudioInfo()+'<div class="card">'+availAdmin()+'</div>':admMe(u)+admMail()+admSet()+admGenres()+admDrops()+admTerms();
+  var body=ptab==='res'?admRes():ptab==='ord'?admOrd():ptab==='bk'?admBk():ptab==='jobs'?admJobs():ptab==='beats'?admBeats():ptab==='prod'?admProd():ptab==='pay'?admPay():ptab==='merch'?merchAdmin():ptab==='codes'?codesAdmin():ptab==='est'?'<div class="card">'+studioAdmin()+'</div>'+admStudioInfo()+'<div class="card">'+availAdmin()+'</div>':admMe(u)+admMail()+admSet()+admGenres()+admDrops()+admTerms();
   paint(shellHTML(u,ATABS,ASUB,{ord:toShip,beats:pendB,bk:nb,pay:owe,prod:APPS.length},'admin',body));
 }
 function renderProd(u){
   if(!PTABS.some(function(t){return t[0]===ptab}))ptab='res';
   var mine=ups.filter(function(b){return b.owner===u.email}), used=activeOf(u.email).length;
-  var body=ptab==='res'?prodRes(u,mine):ptab==='mine'?colabsCard()+myDrops(mine)+prodBeats(u,mine.filter(function(b){return b.status!=='drop'&&b.status!=='expired'}),used):ptab==='up'?(function(){var full=used>=slotsN(),avail=!dropUsedToday(u.email);if(UPMODE==='drop'&&!avail&&!full)UPMODE='cat';if(UPMODE==='cat'&&full&&avail)UPMODE='drop';var none=(!avail&&full);return '<div class="card">'+upModeHTML(u,used)+(none?'<div class="empty2"><b>Hoy no puedes subir más</b><p>Ya lanzaste tu drop de hoy y tus huecos están llenos. Mañana tienes otro drop.</p></div>':producerView(u,'up',UPMODE==='drop'?0:used,mine))+'</div>'})():ptab==='earn'?prodEarn():ptab==='pay'?prodPayInfo():ptab==='studio'?prodStudio(u):'<div class="card">'+profForm(u)+'</div><div class="card"><h3>Tu perfil público</h3><p class="sub2">Compártelo en tus redes para que los artistas escuchen tus beats</p><div class="pact"><button class="btn primary" data-prof="'+esc(u.email)+'">Ver mi perfil</button><button class="btn" data-share="'+esc(u.email)+'">Copiar enlace</button></div></div>';
+  var body=ptab==='res'?prodRes(u,mine):ptab==='mine'?colabsCard()+myDrops(mine)+prodBeats(u,mine.filter(function(b){return b.status!=='drop'&&b.status!=='expired'}),used):ptab==='up'?(function(){var full=used>=slotsN(),avail=!dropUsedToday(u.email);if(UPMODE==='drop'&&!avail&&!full)UPMODE='cat';if(UPMODE==='cat'&&full&&avail)UPMODE='drop';var none=(!avail&&full);return '<div class="card">'+upModeHTML(u,used)+(none?'<div class="empty2"><b>Hoy no puedes subir más</b><p>Ya lanzaste tu drop de hoy y tus huecos están llenos. Mañana tienes otro drop.</p></div>':producerView(u,'up',UPMODE==='drop'?0:used,mine))+'</div>'})():ptab==='earn'?prodEarn():ptab==='pay'?prodPayInfo():ptab==='studio'?prodStudio(u):ptab==='jobs'?prodJobs():'<div class="card">'+profForm(u)+'</div><div class="card"><h3>Tu perfil público</h3><p class="sub2">Compártelo en tus redes para que los artistas escuchen tus beats</p><div class="pact"><button class="btn primary" data-prof="'+esc(u.email)+'">Ver mi perfil</button><button class="btn" data-share="'+esc(u.email)+'">Copiar enlace</button></div></div>';
   var low=mine.filter(function(b){var p=beatPerf(b);return p&&p.k==='low'}).length;
-  paint(shellHTML(u,PTABS,PSUB,{mine:low+invitesForMe().length},'producer',body));
+  paint(shellHTML(u,PTABS,PSUB,{mine:low+invitesForMe().length,jobs:JOBS.filter(function(j){return j.status==='open'}).length},'producer',body));
 }
 
 /* ---------- productor: resumen ---------- */
@@ -3554,6 +3576,87 @@ document.addEventListener('click',function(e){
     return;
   }
   if((x=t.closest('[data-bkrest]'))){if(!confirm('¿Confirmas que se ha cobrado el resto de esta sesión en el estudio?'))return;x.disabled=true;sb.rpc('mark_booking_rest',{p_id:+x.dataset.bkrest}).then(function(r){if(r.error){x.disabled=false;return fail(r.error)}toast('Resto cobrado registrado');return cloudInit()})}
+});
+
+
+/* =====================================================================
+   COLA DE TRABAJO: entregas de mix y master al cliente (se borran en 24 h)
+   ===================================================================== */
+var JOBS=[], DELIVS=[], jobSort='new', jobFilter='open', jobNew=false;
+IC.jobs='<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>';
+PTABS.splice(2,0,['jobs','Trabajos']); PSUB.jobs='Tu cola de trabajo: entrega mixes y masters a tus clientes';
+ATABS.splice(3,0,['jobs','Entregas']); ASUB.jobs='Seguimiento de mixes y masters de las sesiones';
+function jobDelivs(id){return DELIVS.filter(function(d){return d.job_id===id}).sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at)})}
+function jobHas(id,k){return DELIVS.filter(function(d){return d.job_id===id&&d.kind===k}).sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at)})[0]}
+function sortedJobs(list){return list.slice().sort(function(a,b){var x=new Date(a.created_at)-new Date(b.created_at);return jobSort==='new'?-x:x})}
+function leftTxt(d){if(d.deleted_at)return 'Borrado';var ms=new Date(d.expires_at)-Date.now();if(ms<=0)return 'Caducado';var h=Math.floor(ms/36e5);return h?'Se borra en '+h+' h':'Se borra en '+Math.max(1,Math.floor(ms/6e4))+' min'}
+function stepPill(d,label){return '<span class="jstep'+(d?' done':'')+'">'+(d?'✓ ':'')+label+(d?' · '+fdate(d.created_at,{day:'numeric',month:'short'}):'')+'</span>'}
+function jobToolbar(){
+  var L=[['open','Abiertas'],['closed','Cerradas'],['all','Todas']];
+  return '<div class="jtools"><div class="chips adm-chips" style="margin:0">'+L.map(function(c){var n=JOBS.filter(function(j){return c[0]==='all'||j.status===c[0]}).length;return '<button class="chip" data-jfilter="'+c[0]+'" aria-pressed="'+(jobFilter===c[0])+'">'+c[1]+' <span>'+n+'</span></button>'}).join('')+'</div>'+
+    '<select id="jSort" aria-label="Ordenar tareas"><option value="new"'+(jobSort==='new'?' selected':'')+'>Más nuevas primero</option><option value="old"'+(jobSort==='old'?' selected':'')+'>Más antiguas primero</option></select></div>';
+}
+function prodJobs(){
+  var list=sortedJobs(JOBS.filter(function(j){return jobFilter==='all'||j.status===jobFilter}));
+  var d30=DELIVS.filter(function(d){return Date.now()-new Date(d.created_at)<30*864e5}).length;
+  return '<div class="kpis">'+kpi('Tareas abiertas',JOBS.filter(function(j){return j.status==='open'}).length)+kpi('Cerradas',JOBS.filter(function(j){return j.status==='closed'}).length)+kpi('Entregas · 30 días',d30)+'</div>'+
+    '<div class="card"><div class="jhead">'+jobToolbar()+'<button class="btn'+(jobNew?'':' primary')+'" data-jnew>'+(jobNew?'Cancelar':'Nueva tarea')+'</button></div>'+
+    (jobNew?'<div class="jnew"><div class="fgrid3"><div class="field"><label for="jnT">Tarea</label><input id="jnT" maxlength="120" placeholder="Mix y master de «Nombre del tema»"></div><div class="field"><label for="jnN">Cliente</label><input id="jnN" maxlength="80"></div><div class="field"><label for="jnE">Email del cliente</label><input id="jnE" type="email"></div></div><div class="err" id="jnErr" role="alert"></div><button class="btn primary" id="jnGo">Añadir a la cola</button></div>':'')+
+    '<p class="tsub" style="margin:12px 0 0">Las sesiones reservadas contigo se añaden solas. Al enviar el master final la tarea se cierra.</p></div>'+
+    (list.length?list.map(function(j){
+      var mix=jobHas(j.id,'mix'), mas=jobHas(j.id,'master'), ds=jobDelivs(j.id), open=j.status==='open';
+      return '<div class="card job'+(open?'':' closed')+'"><div class="job-top"><div class="job-id"><b>'+esc(j.title)+'</b><small>'+esc(j.client_name||'Sin nombre')+(j.client_email?' · '+esc(j.client_email):' · <span class="warn-txt">sin email</span>')+' · creada '+fdate(j.created_at,{day:'numeric',month:'short'})+'</small></div>'+
+        '<div class="pact tact"><span class="spill '+(open?'pending':'ok')+'">'+(open?'Abierta':'Cerrada')+'</span><button class="btn" data-jtoggle="'+j.id+'">'+(open?'Cerrar':'Reabrir')+'</button><button class="btn" data-jdel="'+j.id+'">Quitar</button></div></div>'+
+        '<div class="jsteps">'+stepPill(mix,'Mix')+stepPill(mas,'Master final')+'</div>'+
+        (ds.length?'<div class="jdl">'+ds.map(function(d){return '<div><span class="spill '+(d.kind==='master'?'ok':'sold')+'">'+(d.kind==='master'?'Master final':'Mix')+'</span><span class="jf">'+esc(d.file_name||'')+'</span><span class="tsub">'+fdate(d.created_at,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' · '+(d.emailed_at?'enviado al cliente':'sin email')+' · '+leftTxt(d)+'</span></div>'}).join('')+'</div>':'')+
+        (open&&j.client_email?'<div class="jup"><label class="btn" for="jf-'+j.id+'">Elegir archivo</label><input id="jf-'+j.id+'" type="file" accept="audio/*,.wav,.mp3,.aiff,.zip" hidden data-jfile="'+j.id+'"><span class="tsub jfn" id="jfn-'+j.id+'">Ningún archivo (máx. 50 MB)</span>'+
+          '<div class="jkind"><label><input type="radio" name="jk-'+j.id+'" value="mix" checked> Mix</label><label><input type="radio" name="jk-'+j.id+'" value="master"> Master final</label></div><button class="btn primary" data-jsend="'+j.id+'">Enviar al cliente</button></div>':'')+'</div>'}).join(''):'<p class="note">No hay tareas en esta vista.</p>');
+}
+function admJobs(){
+  var list=sortedJobs(JOBS.filter(function(j){return jobFilter==='all'||j.status===jobFilter}));
+  var openNoMix=JOBS.filter(function(j){return j.status==='open'&&!jobHas(j.id,'mix')}).length;
+  var masters=DELIVS.filter(function(d){return d.kind==='master'&&Date.now()-new Date(d.created_at)<30*864e5}).length;
+  return '<div class="kpis">'+kpi('Tareas abiertas',JOBS.filter(function(j){return j.status==='open'}).length)+kpi('Abiertas sin mix',openNoMix,openNoMix?'Revisa con el productor':'Todo en marcha')+kpi('Masters entregados · 30 días',masters)+'</div>'+
+    '<div class="card"><div class="jhead">'+jobToolbar()+'</div></div>'+
+    '<div class="tblw"><table class="tbl"><thead><tr><th>Tarea</th><th>Productor</th><th>Cliente</th><th>Creada</th><th>Mix</th><th>Master</th><th>Estado</th></tr></thead><tbody>'+
+    (list.map(function(j){var mix=jobHas(j.id,'mix'), mas=jobHas(j.id,'master'), age=Math.floor((Date.now()-new Date(j.created_at))/864e5);
+      return '<tr><td><b>'+esc(j.title)+'</b></td><td>'+esc(uname(j.producer))+'</td><td>'+esc(j.client_name||'')+'<small class="tsub">'+esc(j.client_email||'')+'</small></td><td>'+fdate(j.created_at,{day:'numeric',month:'short'})+(j.status==='open'&&age>=7?'<small class="tsub warn-txt">hace '+age+' días</small>':'')+'</td><td>'+(mix?'✓ '+fdate(mix.created_at,{day:'numeric',month:'short'}):'<span class="tsub">—</span>')+'</td><td>'+(mas?'✓ '+fdate(mas.created_at,{day:'numeric',month:'short'}):'<span class="tsub">—</span>')+'</td><td><span class="spill '+(j.status==='open'?'pending':'ok')+'">'+(j.status==='open'?'Abierta':'Cerrada')+'</span></td></tr>'}).join('')||'<tr><td colspan="7" class="tsub">No hay tareas en esta vista.</td></tr>')+'</tbody></table></div>';
+}
+document.addEventListener('click',function(e){
+  var t=e.target,x;
+  if((x=t.closest('[data-jfilter]'))){jobFilter=x.dataset.jfilter;renderPanel();return}
+  if(t.closest('[data-jnew]')){jobNew=!jobNew;renderPanel();return}
+  if(t.closest('#jnGo')){
+    var v={producer:me,title:$('#jnT').value.trim(),client_name:$('#jnN').value.trim()||null,client_email:$('#jnE').value.trim().toLowerCase()||null};
+    if(!v.title)return $('#jnErr').textContent='Escribe qué hay que hacer.';
+    if(v.client_email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.client_email))return $('#jnErr').textContent='El email del cliente no es válido.';
+    if(!v.client_email)return $('#jnErr').textContent='Pon el email del cliente para poder enviarle las entregas.';
+    sb.from('jobs').insert(v).then(function(r){if(r.error)return fail(r.error);jobNew=false;toast('Tarea añadida');return cloudInit()});return;
+  }
+  if((x=t.closest('[data-jtoggle]'))){var j=JOBS.filter(function(z){return z.id===+x.dataset.jtoggle})[0];if(!j)return;var open=j.status==='open';
+    sb.from('jobs').update({status:open?'closed':'open',closed_at:open?new Date().toISOString():null}).eq('id',j.id).then(function(r){if(r.error)return fail(r.error);j.status=open?'closed':'open';renderPanel();toast(open?'Tarea cerrada':'Tarea reabierta')});return}
+  if((x=t.closest('[data-jdel]'))){var jd=JOBS.filter(function(z){return z.id===+x.dataset.jdel})[0];if(!jd||!confirm('¿Quitar «'+jd.title+'» de tu cola? Se borra también su historial de entregas.'))return;
+    var files=jobDelivs(jd.id).filter(function(d){return !d.deleted_at}).map(function(d){return d.file_path});
+    (files.length?sb.storage.from('deliveries').remove(files):Promise.resolve()).then(function(){return sb.from('jobs').delete().eq('id',jd.id)}).then(function(r){if(r&&r.error)return fail(r.error);toast('Tarea quitada');return cloudInit()});return}
+  if((x=t.closest('[data-jsend]'))){
+    var id=+x.dataset.jsend, inp=$('#jf-'+id), f=inp&&inp.files[0], kind=(($('input[name="jk-'+id+'"]:checked')||{}).value)||'mix';
+    if(!f)return toast('Elige el archivo primero');
+    if(f.size>50*1048576)return toast('El archivo pesa más de 50 MB. Expórtalo en MP3 o comprímelo en ZIP.');
+    if(kind==='master'&&!confirm('Vas a enviar el MASTER FINAL. La tarea se cerrará. ¿Seguir?'))return;
+    var safe=f.name.replace(/[^\w.\-]+/g,'_').slice(-80), path=me+'/'+id+'/'+Date.now()+'-'+safe;
+    x.disabled=true; x.textContent='Subiendo…';
+    sb.storage.from('deliveries').upload(path,f,{contentType:f.type||'application/octet-stream'}).then(function(r){if(r.error)throw r.error;x.textContent='Enviando…';return sb.functions.invoke('deliver',{body:{job_id:id,kind:kind,path:path,name:f.name}})})
+      .then(function(r){var d=r.data||{};if(d.error||r.error)throw new Error(d.error==='no_client_email'?'La tarea no tiene email del cliente':(d.error||r.error.message));
+        if(d.mailed)toast((kind==='master'?'Master final':'Mix')+' enviado. El cliente tiene 24 horas para descargarlo.');
+        else{try{navigator.clipboard.writeText(d.url)}catch(_){ }alert('Archivo subido, pero el email no ha salido (revisa Resend). Te he copiado el enlace de descarga para que se lo pases al cliente; caduca en 24 horas.')}
+        return cloudInit()})
+      .catch(function(err){x.disabled=false;x.textContent='Enviar al cliente';fail(err)});
+  }
+});
+document.addEventListener('change',function(e){
+  var t=e.target;
+  if(t.id==='jSort'){jobSort=t.value;renderPanel();return}
+  if(t.dataset&&t.dataset.jfile){var n=$('#jfn-'+t.dataset.jfile);if(n)n.textContent=t.files[0]?t.files[0].name+' · '+(t.files[0].size/1048576).toFixed(1)+' MB':'Ningún archivo'}
 });
 
 /* init */
