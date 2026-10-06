@@ -896,6 +896,28 @@ body:has(.adm:not([hidden])) .ring{display:none!important}
 .colab select{flex:1;min-width:220px;background:#0B0C0F;border:1px solid var(--line);border-radius:6px;color:var(--ink);padding:9px 12px;font:inherit}
 .drow-main small b{display:inline}
 .drow .colab{flex-basis:100%}.drow{flex-wrap:wrap}
+
+/* estudio con productores */
+.studio-info{margin-top:22px;display:flex;flex-direction:column;gap:14px}
+.si-eq span,.si-prods>span{display:block;color:var(--mute);font-size:.8rem;margin-bottom:4px}
+.si-eq b{font-size:.95rem}
+.si-prods>div{display:flex;flex-wrap:wrap;gap:8px}
+.si-prod{display:flex;align-items:center;gap:8px;background:#0B0C0F;border:1px solid var(--line);border-radius:99px;padding:5px 12px 5px 5px;color:var(--ink);cursor:pointer;font:inherit}
+.si-prod:hover{border-color:#fff}.si-prod .avatar{width:28px;height:28px;font-size:.8rem}.si-prod b{font-size:.88rem}.si-prod small{color:var(--mute);font-size:.8rem}
+.si-rules{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:#0B0C0F}
+.si-rules summary{cursor:pointer;font-weight:600;font-size:.9rem}
+.si-rules ul{margin:10px 0 2px;padding-left:18px;color:var(--mute);font-size:.88rem;line-height:1.6}
+.si-rules p{margin:10px 0 0;font-size:.88rem}
+.bk-who{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.bk-opt{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:center;text-align:left;background:#0B0C0F;border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--ink);cursor:pointer;font:inherit}
+.bk-opt .avatar{grid-row:1/3;width:34px;height:34px;font-size:.9rem}
+.bk-opt b{font-size:.92rem}.bk-opt small{color:var(--mute);font-size:.8rem}
+.bk-opt:not(:has(.avatar)) b,.bk-opt:not(:has(.avatar)) small{grid-column:1/-1}
+.bk-opt[aria-pressed="true"]{border-color:#fff;box-shadow:inset 0 0 0 1px #fff}
+.bk-who+.ph,.bk-who~.si-rules{margin-top:16px}
+.avtbl{max-width:520px;margin:6px 0 14px}.avtbl select{background:#0B0C0F;border:1px solid var(--line);border-radius:6px;color:var(--ink);padding:6px 8px;font:inherit}
+.avtbl select:disabled{opacity:.35}
+.col-tag{position:absolute;bottom:10px;left:10px;background:rgba(255,255,255,.92);color:#000;border-radius:99px;padding:3px 9px;font:700 .68rem var(--body)}
 </style>
 
 </head>
@@ -1050,8 +1072,8 @@ body:has(.adm:not([hidden])) .ring{display:none!important}
 
   <section class="block" id="estudio" style="padding-top:0"><div class="wrap">
     <div class="studio rv">
-      <div><h2 class="h2">Estudio</h2><p class="sub">Reserva una sesión de grabación o mezcla. Elige día y hora y confírmala con una señal del 50%; el resto se paga en el estudio.</p>
-      <button class="btn primary" id="bookOpen" style="margin-top:22px">Reservar el estudio</button></div>
+      <div><h2 class="h2">Estudio</h2><p class="sub">Reserva una sesión de grabación o mezcla: solo el estudio si vienes con tu productor, o con uno de los productores del sello. Se confirma con una señal del 50 % y el resto se paga en el estudio.</p>
+      <button class="btn primary" id="bookOpen" style="margin-top:22px">Reservar el estudio</button><div id="studioInfo" class="studio-info"></div></div>
       <dl class="specs"><div><dt>Precio</dt><dd id="rateTxt">35 € por hora</dd></div><div><dt>Horario</dt><dd id="hrsTxt">10:00 a 22:00</dd></div><div><dt>Sesión mínima</dt><dd id="minTxt">2 horas</dd></div></dl>
     </div></div></section>
 
@@ -2021,7 +2043,7 @@ function openBook(){
   if(bk.dur<ST.min||bk.dur>ST.max)bk.dur=ST.min;
   renderBook(); openDlg('#bookDlg');
 }
-function renderBook(){
+function renderBookOld(){
   var now=new Date(), h='<div class="dlg-head"><div><h2 id="bookTitle">'+(bk.done?'Reserva confirmada':'Reservar estudio')+'</h2><p>'+ST.rate+' € por hora, de '+ST.open+':00 a '+ST.close+':00.</p></div><button class="x" data-close aria-label="Cerrar">×</button></div>';
   if(bk.done){
     var b=bk.done, L=calLinks(b);
@@ -2360,7 +2382,7 @@ function refreshBusy(){
 async function loadAll(){
   var R=function(x){if(x.error)throw x.error;return x.data||[]}, admin=false, mine=null;
   if(me){var m0=await sb.from('profiles').select('*').eq('id',me).maybeSingle();mine=m0.data;admin=!!(mine&&mine.role==='admin')}
-  var mk=function(p,mail){return {email:p.id,mail:mail||'',name:p.name,role:p.role||'producer',avatar:p.avatar_url,bio:p.bio||'',prices:p.prices||{}}};
+  var mk=function(p,mail){return {email:p.id,mail:mail||'',name:p.name,role:p.role||'producer',avatar:p.avatar_url,bio:p.bio||'',prices:p.prices||{},studio:p.studio||{}}};
   users=R(await sb.from('producers_public').select('*')).map(function(p){return mk(p)});
   if(mine){var sf=users.filter(function(u){return u.email===mine.id})[0];if(sf){sf.mail=mine.email}else users.push(mk(mine,mine.email))}
   if(admin)R(await sb.from('profiles').select('*')).forEach(function(p){var u=users.filter(function(x){return x.email===p.id})[0];if(u){u.mail=p.email;u.role=p.role}else users.push(mk(p,p.email))});
@@ -2370,10 +2392,11 @@ async function loadAll(){
   if(pd.length){PRODUCTS={};pd.forEach(function(r){PRODUCTS[r.id]=r.data})}
   else{PRODUCTS={};if(admin){PRODUCTS=JSON.parse(JSON.stringify(DEFP));LS.s('dm_merch',PRODUCTS)}}
   GENRES=R(await sb.from('genres').select('*'));applyGenres(GENRES);
-  R(await sb.from('settings').select('*')).forEach(function(r){if(r.key==='drops'&&r.value)DROPCFG=Object.assign({},DROPCFG,r.value);if(r.key==='perf'&&r.value)PERFCFG=Object.assign({},PERFCFG,r.value);if(r.key==='licensor'&&r.value)LIC=Object.assign({},LIC,r.value);if(r.key==='tag'&&r.value&&r.value.path)TAG={path:r.value.path,name:r.value.name,url:sb.storage.from('previews').getPublicUrl(r.value.path).data.publicUrl};if(r.key==='links')links=r.value||links;if(r.key==='studio'&&r.value){var v=r.value;ST.rate=Number(v.rate)||ST.rate;ST.open=+v.open||ST.open;ST.close=+v.close||ST.close;ST.min=+v.min||ST.min;ST.max=+v.max||ST.max;studioTxt()}});
+  R(await sb.from('settings').select('*')).forEach(function(r){if(r.key==='studio_info'&&r.value)STINFO=Object.assign({},STINFO,r.value);if(r.key==='drops'&&r.value)DROPCFG=Object.assign({},DROPCFG,r.value);if(r.key==='perf'&&r.value)PERFCFG=Object.assign({},PERFCFG,r.value);if(r.key==='licensor'&&r.value)LIC=Object.assign({},LIC,r.value);if(r.key==='tag'&&r.value&&r.value.path)TAG={path:r.value.path,name:r.value.name,url:sb.storage.from('previews').getPublicUrl(r.value.path).data.publicUrl};if(r.key==='links')links=r.value||links;if(r.key==='studio'&&r.value){var v=r.value;ST.rate=Number(v.rate)||ST.rate;ST.open=+v.open||ST.open;ST.close=+v.close||ST.close;ST.min=+v.min||ST.min;ST.max=+v.max||ST.max;studioTxt()}});
   busy=R(await sb.from('taken_slots').select('*')).map(function(x){return {id:x.id,d:x.d,s:x.s,e:x.e,src:x.src}});
   if(admin){
-    books=R(await sb.from('bookings').select('*').neq('status','cancelled').order('d')).map(function(b){return {id:b.id,date:b.d,start:b.h,dur:b.dur,name:b.name,email:b.email,status:b.status,deposit:+b.deposit||0,paid_at:b.paid_at}});
+    books=R(await sb.from('bookings').select('*').neq('status','cancelled').order('d')).map(function(b){return {id:b.id,date:b.d,start:b.h,dur:b.dur,name:b.name,email:b.email,status:b.status,deposit:+b.deposit||0,paid_at:b.paid_at,producer:b.producer,total:+b.total||0,rest:b.rest_paid_at}});
+    var sa=R(await sb.from('secrets').select('*').eq('key','studio_address'));STADDR=sa[0]?sa[0].value:'';
     playsD=R(await sb.from('beat_plays_daily').select('*').gte('d',iso(new Date(Date.now()-30*864e5))));
     ordersC=R(await sb.from('orders').select('*').order('created_at',{ascending:false}).limit(500));
     codes=R(await sb.from('codes').select('*')).map(function(c){return {code:c.code,type:c.type,val:+c.val,on:c.active}});
@@ -2393,12 +2416,13 @@ async function loadAll(){
       var tm2=await sb.rpc('my_terms');TERMS=tm2.data||null;
       playsD=R(await sb.from('beat_plays_daily').select('*').gte('d',iso(new Date(Date.now()-30*864e5))));
       SPLITS=R(await sb.from('beat_splits').select('*'));
+      MYBOOKS=R(await sb.from('bookings').select('*').eq('producer',me).neq('status','cancelled'));
     }
   }
 }
 function cloudInit(){
   return sb.auth.getSession().then(function(r){me=r.data&&r.data.session?r.data.session.user.id:null;return loadAll()}).then(function(){
-    rebuildBeats(); renderChips();
+    rebuildBeats(); renderChips(); renderStudioInfo();
     cart=cart.filter(function(i){return i.m?!!PRODUCTS[i.id]:!!beatById(i.id)});
     accLabel();renderShop();renderMedia();renderCart();renderList();handleReturn();
     var p=$('#panDlg');if((p&&p.open)||admOpen())renderPanel();
@@ -2477,7 +2501,7 @@ function cloudOrder(v){
     location.href=d.url;
   });
 }
-function cloudBook(){
+function cloudBookOld(){
   var n=bk.name.trim(), em=bk.email.trim().toLowerCase(), btn=$('#bkGo');
   btn.disabled=true; btn.textContent='Redirigiendo a Stripe…';
   sb.functions.invoke('create-checkout',{body:{kind:'booking',date:bk.date,start:bk.start,dur:bk.dur,name:n,email:em}}).then(function(r){
@@ -2779,14 +2803,14 @@ function admOrd(){
           '<table class="tbl mini"><tr><td>Subtotal</td><td class="num">'+eur.format(+o.subtotal)+'</td></tr>'+(+o.discount>0?'<tr><td>Descuento'+(o.code?' ('+esc(o.code)+')':'')+'</td><td class="num">−'+eur.format(+o.discount)+'</td></tr>':'')+(o.shipping_cost?'<tr><td>Envío</td><td class="num">'+eur.format(+o.shipping_cost)+'</td></tr>':'')+'<tr><td><b>Total</b></td><td class="num"><b>'+eur.format(oSum(o))+'</b></td></tr></table>'+
           ((o.licenses||[]).length?'<h4>Contratos</h4><div class="pact">'+o.licenses.map(function(p,k){return '<button class="btn" data-licdl="'+esc(p)+'">Contrato '+(k+1)+' (PDF)</button>'}).join('')+'</div>':'')+'</div>'+
           '<div>'+(hasMerch(o)?'<h4>Envío</h4><p>'+esc(o.shipping_method||'—')+'</p>'+(a?'<p>'+esc(sd.name||'')+'<br>'+esc(a.line1||'')+(a.line2?', '+esc(a.line2):'')+'<br>'+esc(a.postal_code||'')+' '+esc(a.city||'')+(a.state?' ('+esc(a.state)+')':'')+'</p>':'')+(o.phone?'<p>Tel. '+esc(o.phone)+'</p>':'')+
-            (o.status==='paid'?(o.shipped_at?'<p class="note">Enviado el '+fdate(o.shipped_at,{day:'numeric',month:'long'})+(o.tracking?' · Seguimiento: <b>'+esc(o.tracking)+'</b>':'')+'</p>':'<div class="field"><label for="trk-'+o.id+'">Número de seguimiento de Correos'+(/seguimiento/i.test(o.shipping_method||'')?'':' (opcional)')+'</label><input id="trk-'+o.id+'" placeholder="PK123456789ES"></div><button class="btn primary" data-ship="'+o.id+'">Marcar como enviado y avisar</button>'):''):'<h4>Entrega</h4><p>Digital: el cliente recibió el beat y el contrato por email'+(o.emailed_at?' el '+fdate(o.emailed_at,{day:'numeric',month:'long'}):'')+'.</p>')+
+            (o.status==='paid'?(o.shipped_at?'<p class="note">Enviado el '+fdate(o.shipped_at,{day:'numeric',month:'long'})+(o.tracking?' · Seguimiento: <b>'+esc(o.tracking)+'</b>':'')+'</p>':'<div class="field"><label for="trk-'+o.id+'">Número de seguimiento de Correos'+(/seguimiento/i.test(o.shipping_method||'')?'':' (opcional)')+'</label><input id="trk-'+o.id+'" placeholder="PK123456789ES"></div><button class="btn primary" data-ship="'+o.id+'" data-need="'+(/seguimiento/i.test(o.shipping_method||'')?1:0)+'">Confirmar envío y avisar al cliente</button>'):''):'<h4>Entrega</h4><p>Digital: el cliente recibió el beat y el contrato por email'+(o.emailed_at?' el '+fdate(o.emailed_at,{day:'numeric',month:'long'}):'')+'.</p>')+
           '<p class="tsub">Cliente: '+esc(o.email)+'</p></div></div></details>'}).join('')||'<p class="note">No hay pedidos en esta vista.</p>')+'</div>';
 }
 function admBk(){
   var td=iso(new Date()), act=books.filter(function(b){return b.status!=='cancelled'}).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.start-b.start});
   var up=act.filter(function(b){return b.date>=td}), past=act.filter(function(b){return b.date<td}).reverse(), ym=td.slice(0,7);
   var hrs=act.filter(function(b){return b.date.slice(0,7)===ym}).reduce(function(s,b){return s+b.dur},0);
-  function rows(l){return '<div class="tblw"><table class="tbl"><thead><tr><th>Día</th><th>Horario</th><th>Cliente</th><th class="num">Señal</th><th class="num">En estudio</th><th>Estado</th></tr></thead><tbody>'+l.map(function(b){var tot=ST.rate*b.dur;return '<tr><td><b>'+fdate(b.date+'T12:00:00',{weekday:'short',day:'numeric',month:'short'})+'</b></td><td>'+b.start+':00 – '+(b.start+b.dur)+':00</td><td>'+esc(b.name)+'<small class="tsub">'+esc(b.email)+'</small></td><td class="num">'+eur.format(b.deposit||0)+'</td><td class="num">'+eur.format(Math.max(0,tot-(b.deposit||0)))+'</td><td><span class="spill '+(b.status==='paid'?'ok':'pending')+'">'+(b.status==='paid'?'Confirmada':'Pendiente de pago')+'</span></td></tr>'}).join('')+'</tbody></table></div>'}
+  function rows(l){return '<div class="tblw"><table class="tbl"><thead><tr><th>Día</th><th>Horario</th><th>Cliente</th><th>Con</th><th class="num">Señal</th><th class="num">En estudio</th><th>Estado</th><th></th></tr></thead><tbody>'+l.map(function(b){var tot=b.total||ST.rate*b.dur;return '<tr><td><b>'+fdate(b.date+'T12:00:00',{weekday:'short',day:'numeric',month:'short'})+'</b></td><td>'+b.start+':00 – '+(b.start+b.dur)+':00</td><td>'+esc(b.name)+'<small class="tsub">'+esc(b.email)+'</small></td><td>'+(b.producer?esc(uname(b.producer)):'<span class="tsub">Solo estudio</span>')+'</td><td class="num">'+eur.format(b.deposit||0)+'</td><td class="num">'+eur.format(Math.max(0,tot-(b.deposit||0)))+(b.rest?'<small class="tsub">Cobrado</small>':'')+'</td><td><span class="spill '+(b.status==='paid'?'ok':'pending')+'">'+(b.status==='paid'?'Confirmada':'Pendiente de pago')+'</span></td><td><div class="pact tact">'+(b.status==='paid'&&!b.rest?'<button class="btn" data-bkrest="'+b.id+'">Resto cobrado</button>':'')+'</div></td></tr>'}).join('')+'</tbody></table></div>'}
   return '<div class="kpis">'+kpi('Próximas sesiones',up.filter(function(b){return b.status==='paid'}).length)+kpi('Horas reservadas este mes',hrs+' h')+kpi('Señales cobradas',eur.format(act.filter(function(b){return b.status==='paid'}).reduce(function(s,b){return s+(b.deposit||0)},0)))+kpi('Tarifa',ST.rate+' €/h',ST.open+':00 a '+ST.close+':00','est')+'</div>'+
     '<div class="card"><h3>Próximas</h3><p class="sub2">Ordenadas por fecha</p>'+(up.length?rows(up):'<p class="note" style="margin:0">No hay sesiones próximas.</p>')+'</div>'+
     (past.length?'<div class="card"><h3>Pasadas</h3><p class="sub2">Historial</p>'+rows(past.slice(0,30))+'</div>':'');
@@ -2819,7 +2843,7 @@ function admSet(){
 function renderAdminOld(u){
   var a=admEl(), pendB=ups.filter(function(b){return b.status==='pending'}).length, toShip=ordersC.filter(function(o){return o.status==='paid'&&hasMerch(o)&&!o.shipped_at}).length, nb=books.filter(function(b){return b.status==='paid'&&b.date>=iso(new Date())}).length;
   var badge={ord:toShip,beats:pendB,bk:nb}, title=(ATABS.filter(function(t){return t[0]===ptab})[0]||ATABS[0])[1];
-  var body=ptab==='res'?admRes():ptab==='ord'?admOrd():ptab==='bk'?admBk():ptab==='beats'?admBeats():ptab==='prod'?admProd():ptab==='merch'?merchAdmin():ptab==='codes'?codesAdmin():ptab==='est'?'<div class="card">'+studioAdmin()+'</div><div class="card">'+availAdmin()+'</div>':admSet();
+  var body=ptab==='res'?admRes():ptab==='ord'?admOrd():ptab==='bk'?admBk():ptab==='beats'?admBeats():ptab==='prod'?admProd():ptab==='merch'?merchAdmin():ptab==='codes'?codesAdmin():ptab==='est'?'<div class="card">'+studioAdmin()+'</div>'+admStudioInfo()+'<div class="card">'+availAdmin()+'</div>':admSet();
   var keep=$('.adm-main',a), st=keep?keep.scrollTop:0, same=a.dataset.tab===ptab;
   a.innerHTML='<div class="adm-shell"><aside class="adm-side"><div class="adm-brand"><img src="'+LOGO+'" alt="Drill Mafia"><div><b>Panel oficial</b><small>Drill Mafia · Madrid</small></div></div>'+
     '<nav class="adm-nav" aria-label="Secciones del panel">'+ATABS.map(function(t){return '<button data-ptab="'+t[0]+'"'+(ptab===t[0]?' aria-current="page"':'')+'><svg viewBox="0 0 24 24" aria-hidden="true">'+IC[t[0]]+'</svg>'+t[1]+(badge[t[0]]?'<span class="pbadge">'+badge[t[0]]+'</span>':'')+'</button>'}).join('')+'</nav>'+
@@ -2836,8 +2860,8 @@ document.addEventListener('click',function(e){
   if((x=t.closest('[data-regen]'))){regenPreviews(x.dataset.regen==='all');return}
   if((x=t.closest('[data-licdl]'))){sb.storage.from('licenses').createSignedUrl(x.dataset.licdl,300).then(function(r){if(r.error)return fail(r.error);window.open(r.data.signedUrl,'_blank','noopener')});return}
   if((x=t.closest('[data-ship]'))){
-    var id=+x.dataset.ship, tr=(($('#trk-'+id)||{}).value||'').trim(); x.disabled=true; x.textContent='Guardando…';
-    sb.functions.invoke('order-shipped',{body:{id:id,tracking:tr}}).then(function(r){var m=(r.data&&r.data.error)||(r.error&&r.error.message);if(m){x.disabled=false;x.textContent='Marcar como enviado y avisar';return fail(new Error(m))}
+    var id=+x.dataset.ship, tr=(($('#trk-'+id)||{}).value||'').trim(); if(x.dataset.need==='1'&&tr.length<6){toast('Escribe el número de seguimiento de Correos');var ti=$('#trk-'+id);if(ti)ti.focus();return} x.disabled=true; x.textContent='Guardando…';
+    sb.functions.invoke('order-shipped',{body:{id:id,tracking:tr}}).then(function(r){var m=(r.data&&r.data.error)||(r.error&&r.error.message);if(m){x.disabled=false;x.textContent='Confirmar envío y avisar al cliente';return fail(new Error(m))}
       toast(r.data.mailed?'Pedido marcado como enviado. Hemos avisado al cliente.':'Pedido marcado como enviado. El email no salió: revisa la configuración de Resend.');return cloudInit()});
     return;
   }
@@ -2888,13 +2912,13 @@ function paint(html){var a=admEl(), keep=$('.adm-main',a), st=keep?keep.scrollTo
 function renderAdmin(u){
   var pendB=ups.filter(function(b){return b.status==='pending'}).length, toShip=ordersC.filter(function(o){return o.status==='paid'&&hasMerch(o)&&!o.shipped_at}).length, nb=books.filter(function(b){return b.status==='paid'&&b.date>=iso(new Date())}).length;
   var owe=PINFOS.length+earn.length?users.filter(function(x){return x.role==='producer'&&dueOf(x.email)>=minPay()}).length:0;
-  var body=ptab==='res'?admRes():ptab==='ord'?admOrd():ptab==='bk'?admBk():ptab==='beats'?admBeats():ptab==='prod'?admProd():ptab==='pay'?admPay():ptab==='merch'?merchAdmin():ptab==='codes'?codesAdmin():ptab==='est'?'<div class="card">'+studioAdmin()+'</div><div class="card">'+availAdmin()+'</div>':admMe(u)+admMail()+admSet()+admGenres()+admDrops()+admTerms();
+  var body=ptab==='res'?admRes():ptab==='ord'?admOrd():ptab==='bk'?admBk():ptab==='beats'?admBeats():ptab==='prod'?admProd():ptab==='pay'?admPay():ptab==='merch'?merchAdmin():ptab==='codes'?codesAdmin():ptab==='est'?'<div class="card">'+studioAdmin()+'</div>'+admStudioInfo()+'<div class="card">'+availAdmin()+'</div>':admMe(u)+admMail()+admSet()+admGenres()+admDrops()+admTerms();
   paint(shellHTML(u,ATABS,ASUB,{ord:toShip,beats:pendB,bk:nb,pay:owe,prod:APPS.length},'admin',body));
 }
 function renderProd(u){
   if(!PTABS.some(function(t){return t[0]===ptab}))ptab='res';
   var mine=ups.filter(function(b){return b.owner===u.email}), used=activeOf(u.email).length;
-  var body=ptab==='res'?prodRes(u,mine):ptab==='mine'?colabsCard()+myDrops(mine)+prodBeats(u,mine.filter(function(b){return b.status!=='drop'&&b.status!=='expired'}),used):ptab==='up'?(function(){var full=used>=slotsN(),avail=!dropUsedToday(u.email);if(UPMODE==='drop'&&!avail&&!full)UPMODE='cat';if(UPMODE==='cat'&&full&&avail)UPMODE='drop';var none=(!avail&&full);return '<div class="card">'+upModeHTML(u,used)+(none?'<div class="empty2"><b>Hoy no puedes subir más</b><p>Ya lanzaste tu drop de hoy y tus huecos están llenos. Mañana tienes otro drop.</p></div>':producerView(u,'up',UPMODE==='drop'?0:used,mine))+'</div>'})():ptab==='earn'?prodEarn():ptab==='pay'?prodPayInfo():'<div class="card">'+profForm(u)+'</div><div class="card"><h3>Tu perfil público</h3><p class="sub2">Compártelo en tus redes para que los artistas escuchen tus beats</p><div class="pact"><button class="btn primary" data-prof="'+esc(u.email)+'">Ver mi perfil</button><button class="btn" data-share="'+esc(u.email)+'">Copiar enlace</button></div></div>';
+  var body=ptab==='res'?prodRes(u,mine):ptab==='mine'?colabsCard()+myDrops(mine)+prodBeats(u,mine.filter(function(b){return b.status!=='drop'&&b.status!=='expired'}),used):ptab==='up'?(function(){var full=used>=slotsN(),avail=!dropUsedToday(u.email);if(UPMODE==='drop'&&!avail&&!full)UPMODE='cat';if(UPMODE==='cat'&&full&&avail)UPMODE='drop';var none=(!avail&&full);return '<div class="card">'+upModeHTML(u,used)+(none?'<div class="empty2"><b>Hoy no puedes subir más</b><p>Ya lanzaste tu drop de hoy y tus huecos están llenos. Mañana tienes otro drop.</p></div>':producerView(u,'up',UPMODE==='drop'?0:used,mine))+'</div>'})():ptab==='earn'?prodEarn():ptab==='pay'?prodPayInfo():ptab==='studio'?prodStudio(u):'<div class="card">'+profForm(u)+'</div><div class="card"><h3>Tu perfil público</h3><p class="sub2">Compártelo en tus redes para que los artistas escuchen tus beats</p><div class="pact"><button class="btn primary" data-prof="'+esc(u.email)+'">Ver mi perfil</button><button class="btn" data-share="'+esc(u.email)+'">Copiar enlace</button></div></div>';
   var low=mine.filter(function(b){var p=beatPerf(b);return p&&p.k==='low'}).length;
   paint(shellHTML(u,PTABS,PSUB,{mine:low+invitesForMe().length},'producer',body));
 }
@@ -2926,7 +2950,7 @@ function prodEarn(){
   return '<div class="kpis">'+kpi('Pendiente de cobro',eur.format(pend),pend>=mn?'Entra en el próximo pago':'Se paga a partir de '+eur.format(mn))+kpi('Cobrado',eur.format(paid),payoutsC.length+' pagos')+kpi('Ventas',earn.filter(function(e){return e.status!=='void'}).length)+kpi('Tu parte',TERMS?TERMS.share+' %':'—',TERMS?'Sobre el precio '+(TERMS.base==='net'?'sin IVA':'con IVA'):'')+'</div>'+
     (PINFO&&PINFO.iban?'':'<div class="card warncard"><p class="warn-line" style="margin:0">Añade tus datos de cobro para que podamos pagarte.</p><button class="btn primary" data-ptab="pay">Añadir datos</button></div>')+
     '<div class="card"><h3>Ventas</h3><p class="sub2">Pagamos por transferencia la primera semana de cada mes, cuando el saldo pendiente llega a '+eur.format(mn)+'</p>'+
-    (earn.length?'<div class="tblw"><table class="tbl"><thead><tr><th>Fecha</th><th>Beat</th><th>Licencia</th><th class="num">Precio pagado</th><th class="num">Tu parte</th><th>Estado</th></tr></thead><tbody>'+earn.map(function(e){return '<tr><td>'+fdate(e.created_at,{day:'numeric',month:'short',year:'numeric'})+'</td><td><b>'+esc(e.beat_title||'')+'</b>'+(e.split?'<small class="tsub">Colaboración · tu '+(+e.split).toLocaleString('es-ES')+' %</small>':'')+'</td><td>'+(tierById(e.tier)||{name:e.tier}).name+'</td><td class="num">'+eur.format(+e.gross)+'</td><td class="num"><b>'+eur.format(+e.amount)+'</b></td><td><span class="spill '+(e.status==='paid'?'ok':e.status==='void'?'rej':'pending')+'">'+(e.status==='paid'?'Pagado':e.status==='void'?'Anulado':'Pendiente')+'</span></td></tr>'}).join('')+'</tbody></table></div>':'<p class="note" style="margin:0">Todavía no hay ventas. Cuando alguien compre una licencia de tus beats aparecerá aquí.</p>')+'</div>'+
+    (earn.length?'<div class="tblw"><table class="tbl"><thead><tr><th>Fecha</th><th>Beat</th><th>Licencia</th><th class="num">Precio pagado</th><th class="num">Tu parte</th><th>Estado</th></tr></thead><tbody>'+earn.map(function(e){return '<tr><td>'+fdate(e.created_at,{day:'numeric',month:'short',year:'numeric'})+'</td><td><b>'+esc(e.beat_title||'')+'</b>'+(e.split?'<small class="tsub">Colaboración · tu '+(+e.split).toLocaleString('es-ES')+' %</small>':'')+'</td><td>'+(e.kind==='studio'?'Estudio':(tierById(e.tier)||{name:e.tier}).name)+'</td><td class="num">'+eur.format(+e.gross)+'</td><td class="num"><b>'+eur.format(+e.amount)+'</b></td><td><span class="spill '+(e.status==='paid'?'ok':e.status==='void'?'rej':'pending')+'">'+(e.status==='paid'?'Pagado':e.status==='void'?'Anulado':'Pendiente')+'</span></td></tr>'}).join('')+'</tbody></table></div>':'<p class="note" style="margin:0">Todavía no hay ventas. Cuando alguien compre una licencia de tus beats aparecerá aquí.</p>')+'</div>'+
     (payoutsC.length?'<div class="card"><h3>Pagos recibidos</h3><p class="sub2">Historial de transferencias</p><table class="tbl"><thead><tr><th>Fecha</th><th>Referencia</th><th class="num">Importe</th></tr></thead><tbody>'+payoutsC.map(function(p){return '<tr><td>'+fdate(p.created_at,{day:'numeric',month:'long',year:'numeric'})+'</td><td>'+esc(p.ref||'—')+'</td><td class="num"><b>'+eur.format(+p.amount)+'</b></td></tr>'}).join('')+'</tbody></table></div>':'');
 }
 function prodPayInfo(){
@@ -2954,7 +2978,7 @@ function admDrops(){var c=DROPCFG;return '<div class="card"><h3>Drop diario</h3>
 function admTerms(){
   var t=TERMS||{share:80,base:'net',vat:21,min:20}, c=PERFCFG;
   function n(id,l,v,mn,mx,st){return '<div class="field"><label for="'+id+'">'+l+'</label><input id="'+id+'" type="number" min="'+mn+'" max="'+mx+'" step="'+(st||1)+'" value="'+v+'"></div>'}
-  return '<div class="card"><h3>Reparto con productores</h3><p class="sub2">Solo lo ven la administración y cada productor en su panel. Los compradores no lo ven.</p><div class="fgrid">'+n('tmS','% para el productor',t.share,1,99)+'<div class="field"><label for="tmB">Se calcula sobre</label><select id="tmB"><option value="net"'+(t.base==='net'?' selected':'')+'>Precio sin IVA</option><option value="gross"'+(t.base==='gross'?' selected':'')+'>Precio con IVA</option></select></div>'+n('tmV','IVA (%)',t.vat,0,30)+n('tmM','Pago mínimo (€)',t.min||20,0,1000)+'</div><div class="err" id="tmErr" role="alert"></div><button class="btn primary" id="tmSave">Guardar reparto</button><p class="tsub" style="margin-top:10px">Los cambios se aplican a las ventas nuevas; las ya registradas mantienen su cálculo.</p></div>'+
+  return '<div class="card"><h3>Reparto con productores</h3><p class="sub2">Solo lo ven la administración y cada productor en su panel. Los compradores no lo ven.</p><div class="fgrid">'+n('tmS','% para el productor',t.share,1,99)+'<div class="field"><label for="tmB">Se calcula sobre</label><select id="tmB"><option value="net"'+(t.base==='net'?' selected':'')+'>Precio sin IVA</option><option value="gross"'+(t.base==='gross'?' selected':'')+'>Precio con IVA</option></select></div>'+n('tmV','IVA (%)',t.vat,0,30)+n('tmM','Pago mínimo (€)',t.min||20,0,1000)+n('tmD','% para Drill Mafia en sesiones de estudio con productor',t.studio_dm!=null?t.studio_dm:30,0,99)+'</div><div class="err" id="tmErr" role="alert"></div><button class="btn primary" id="tmSave">Guardar reparto</button><p class="tsub" style="margin-top:10px">Los cambios se aplican a las ventas nuevas; las ya registradas mantienen su cálculo.</p></div>'+
     '<div class="card"><h3>Rendimiento del catálogo</h3><p class="sub2">Reglas para mantener el catálogo fresco</p><div class="fgrid">'+n('pfH','«En racha» desde (escuchas en 30 días)',c.hot,1,100000)+n('pfL','«Baja» por debajo de (escuchas en 30 días)',c.low,1,100000)+n('pfD','Días de margen para bases nuevas',c.days,7,120)+n('pfR','Retirar bases en «Baja» con más de (días)',c.retire_days,30,365)+'</div><label class="chk"><input type="checkbox" id="pfA"'+(c.auto?' checked':'')+'> Retirar automáticamente el día 1 de cada mes (si no han tenido ventas en 60 días)</label><div class="err" id="pfErr" role="alert"></div><button class="btn primary" id="pfSave">Guardar reglas</button></div>';
 }
 
@@ -3012,7 +3036,7 @@ document.addEventListener('click',function(e){
     return;
   }
   if(t.closest('#tmSave')){
-    var tm={share:+$('#tmS').value,base:$('#tmB').value,vat:+$('#tmV').value,min:+$('#tmM').value};
+    var tm={share:+$('#tmS').value,base:$('#tmB').value,vat:+$('#tmV').value,min:+$('#tmM').value,studio_dm:+$('#tmD').value};
     if(!(tm.share>=1&&tm.share<=99))return $('#tmErr').textContent='El porcentaje debe estar entre 1 y 99.';
     sb.rpc('set_terms',{p:tm}).then(function(r){if(r.error)return fail(r.error);TERMS=tm;renderPanel();toast('Reparto guardado')});
     return;
@@ -3264,7 +3288,7 @@ function pimgSrc(p){return p&&p.img?(p.img.charAt(0)==='@'?(pimgMap()[p.img.slic
 /* ---------- tienda por colecciones, con «Próximamente» ---------- */
 function prodCard(k){
   var p=PRODUCTS[k], ts=totalStock(p), out=!p.soon&&ts<=0, first=['S','M','L','XL'].filter(function(z){return p.stock[z]>0})[0], src=pimgSrc(p);
-  return '<article class="prod'+(out?' out':'')+(p.soon?' soon':'')+'"><div class="pimg'+(src?' has-photo':'')+'">'+(src?'<img class="pphoto" src="'+src+'" alt="'+esc(p.name)+'">':'<svg viewBox="0 0 100 100" aria-hidden="true">'+(p.svg||'')+'</svg><img class="plogo" data-logo alt="" style="top:'+p.ly+'%;width:'+p.lw+'%">')+(p.soon?'<span class="soon-tag">Próximamente</span>':'')+'</div>'+
+  return '<article class="prod'+(out?' out':'')+(p.soon?' soon':'')+'"><div class="pimg'+(src?' has-photo':'')+'">'+(src?'<img class="pphoto" src="'+src+'" alt="'+esc(p.name)+'">':'<svg viewBox="0 0 100 100" aria-hidden="true">'+(p.svg||'')+'</svg><img class="plogo" data-logo alt="" style="top:'+p.ly+'%;width:'+p.lw+'%">')+(p.soon?'<span class="soon-tag">Próximamente</span>':'')+(p.col?'<span class="col-tag">'+((shopCols().filter(function(c){return c[0]===p.col})[0]||[0,''])[1])+'</span>':'')+'</div>'+
     '<div class="pbody"><h3>'+esc(p.name)+'</h3><p>'+esc(p.desc||'')+'</p>'+(!p.soon&&ts>0&&ts<=5?'<span class="stock">Quedan '+ts+'</span>':'')+
     '<div class="pfoot">'+(p.soon?'<b class="tsub">Muy pronto</b><button class="btn" disabled>Próximamente</button>':
       '<b>'+eur.format(p.price)+'</b>'+(p.sizes&&!out?'<select id="sz-'+k+'" aria-label="Talla de '+esc(p.name)+'">'+['S','M','L','XL'].map(function(z){return '<option value="'+z+'"'+(z===first?' selected':'')+(p.stock[z]>0?'':' disabled')+'>'+z+(p.stock[z]>0?'':' (agotada)')+'</option>'}).join('')+'</select>':'')+'<button class="btn primary" data-addm="'+k+'"'+(out?' disabled>Agotado':'>Añadir')+'</button>')+'</div></div></article>';
@@ -3273,7 +3297,7 @@ function renderShop(){
   var ks=Object.keys(PRODUCTS).filter(function(k){return PRODUCTS[k].on});
   if(!ks.length){$('#shop').innerHTML='<p class="note">Pronto habrá productos nuevos.</p>';return}
   var groups=shopCols().map(function(c){return [c,ks.filter(function(k){return (PRODUCTS[k].col||'')===c[0]})]}).filter(function(g){return g[1].length});
-  var many=groups.length>1;
+  var many=false;
   $('#shop').innerHTML=groups.map(function(g){return (many?'<div class="colh"><h3>'+g[0][1]+'</h3>'+(g[0][2]?'<p>'+g[0][2]+'</p>':'')+'</div>':'')+g[1].map(prodCard).join('')}).join('');
   $$('#shop [data-logo]').forEach(function(i){i.src=LOGO});
 }
@@ -3419,6 +3443,117 @@ document.addEventListener('click',function(e){
     if(!d.configured)return m.textContent='Resend no está configurado todavía.';
     m.textContent=(d.sent&&d.sent.length?'Enviados: '+d.sent.join(', ')+'. ':'')+(d.failed&&d.failed.length?'Fallaron: '+d.failed.join(' | '):'Revisa tu bandeja (y la carpeta de spam).');
   }).catch(function(err){b.disabled=false;m.textContent='Error: '+err.message});
+});
+
+
+/* =====================================================================
+   ESTUDIO CON PRODUCTORES · INFO DEL ESTUDIO · ENVÍOS CON SEGUIMIENTO
+   ===================================================================== */
+var STINFO={equipment:'',rules:''}, STADDR='', MYBOOKS=[], DOWN=['','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+bk.prod=bk.prod||'';
+function studioProds(){return users.filter(function(u){var s=u.studio||{};return u.role==='producer'&&s.on&&+s.rate>0})}
+function isoDow(dateStr){var d=new Date(dateStr+'T12:00:00');return d.getDay()||7}
+function prodAvail(u,dateStr){var a=((u&&u.studio&&u.studio.avail)||{})[isoDow(dateStr)];return a&&a.length===2?a:null}
+function rulesList(){return String(STINFO.rules||'').split('\n').map(function(s){return s.trim()}).filter(Boolean)}
+
+/* ---------- web pública: equipo, normas y productores del estudio ---------- */
+function renderStudioInfo(){
+  var el=$('#studioInfo'); if(!el)return;
+  var ps=studioProds(), r=rulesList();
+  el.innerHTML=(STINFO.equipment?'<div class="si-eq"><span>Equipo</span><b>'+esc(STINFO.equipment)+'</b></div>':'')+
+    (ps.length?'<div class="si-prods"><span>Reserva con un productor del sello</span><div>'+ps.map(function(u){return '<button class="si-prod" data-bookprod="'+esc(u.email)+'">'+avatarHTML(u)+'<b>'+esc(u.name)+'</b><small>'+eur.format(+u.studio.rate)+'/h</small></button>'}).join('')+'</div></div>':'')+
+    (r.length?'<details class="si-rules"><summary>Normas básicas del estudio</summary><ul>'+r.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul></details>':'');
+}
+
+/* ---------- diálogo de reserva: solo estudio o con productor ---------- */
+function renderBook(){
+  var now=new Date(), prods=studioProds(), P=bk.prod?prods.filter(function(u){return u.email===bk.prod})[0]:null;
+  if(bk.prod&&!P)bk.prod='';
+  var rate=P?+P.studio.rate:ST.rate;
+  var h='<div class="dlg-head"><div><h2 id="bookTitle">'+(bk.done?'Reserva confirmada':'Reservar estudio')+'</h2><p>'+(P?'Sesión con '+esc(P.name)+' · '+eur.format(rate)+' por hora':eur.format(ST.rate)+' por hora, de '+ST.open+':00 a '+ST.close+':00')+'</p></div><button class="x" data-close aria-label="Cerrar">×</button></div>';
+  if(bk.done){
+    var b=bk.done, L=calLinks(b);
+    h+='<p>'+esc(b.name)+', tu sesión es el <b>'+new Date(b.date+'T12:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})+'</b> de '+b.start+':00 a '+(b.start+b.dur)+':00.</p><div class="bk-links"><a class="btn primary" target="_blank" rel="noopener" href="'+L.g+'">Google Calendar</a><a class="btn" target="_blank" rel="noopener" href="'+L.o+'">Outlook</a></div>';
+    $('#bookBody').innerHTML=h; return;
+  }
+  h+='<p class="ph" style="margin-top:0">¿Con quién grabas?</p><div class="bk-who"><button class="bk-opt" data-bkprod="" aria-pressed="'+(!bk.prod)+'"><b>Solo el estudio</b><small>Vienes con tu productor · '+eur.format(ST.rate)+'/h</small></button>'+
+    prods.map(function(u){return '<button class="bk-opt" data-bkprod="'+esc(u.email)+'" aria-pressed="'+(bk.prod===u.email)+'">'+avatarHTML(u)+'<b>'+esc(u.name)+'</b><small>Productor del sello · '+eur.format(+u.studio.rate)+'/h</small></button>'}).join('')+'</div>';
+  h+='<p class="ph">Día</p><div class="bubs" role="group" aria-label="Día">';
+  for(var i=0;i<14;i++){var d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i), k=iso(d), off=P&&!prodAvail(P,k);
+    h+='<button class="bub-btn" data-bdate="'+k+'" aria-pressed="'+(bk.date===k)+'"'+(off?' disabled':'')+'><small>'+DN[d.getDay()]+'</small><b>'+d.getDate()+'</b></button>'}
+  var av=P?prodAvail(P,bk.date):null, open=Math.max(ST.open,av?av[0]:ST.open), close=Math.min(ST.close,av?av[1]:ST.close);
+  h+='</div><p class="ph">Duración</p><div class="bubs">'+Array.from({length:ST.max-ST.min+1},function(_,i){return ST.min+i}).map(function(n){return '<button class="bub-btn" data-bd="'+n+'" aria-pressed="'+(bk.dur===n)+'"><b>'+n+'</b><small>horas</small></button>'}).join('')+'</div><p class="ph">Hora de inicio</p><div class="bubs">';
+  var today=bk.date===iso(now), any=false;
+  if(P&&!av)h+='<p class="stock">'+esc(P.name)+' no tiene disponibilidad ese día. Elige otro.</p>';
+  else for(var s=open;s<=close-bk.dur;s++){var off2=clash(bk.date,s,bk.dur)||(today&&s<=now.getHours());any=any||!off2;
+    h+='<button class="bub-btn" data-bs="'+s+'" aria-pressed="'+(bk.start===s)+'"'+(off2?' disabled':'')+'><b>'+s+'</b><small>:00</small></button>'}
+  h+='</div><p class="stock" style="margin-top:8px">'+(av&&!any?'No quedan horas libres ese día.':'Las horas tachadas ya están ocupadas.')+'</p><div class="fgrid" style="margin-top:18px"><div class="field"><label for="bkName">Nombre</label><input id="bkName" autocomplete="name" value="'+esc(bk.name)+'"></div><div class="field"><label for="bkMail">Email</label><input id="bkMail" type="email" autocomplete="email" value="'+esc(bk.email)+'"></div></div>'+
+    '<div class="bk-total"><span>Total</span><b>'+eur.format(rate*bk.dur)+'</b></div>'+(sb?'<p class="note">Para confirmar pagas ahora el 50 % ('+eur.format(rate*bk.dur/2)+') y el resto en el estudio. La dirección te llega por email al confirmar la reserva.</p>':'')+
+    (STINFO.equipment||rulesList().length?'<details class="si-rules"><summary>Equipo y normas del estudio</summary>'+(STINFO.equipment?'<p><b>Equipo:</b> '+esc(STINFO.equipment)+'</p>':'')+'<ul>'+rulesList().map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul></details>':'')+
+    '<label class="chk"><input type="checkbox" id="bkOk"'+(bk.ok?' checked':'')+'> <span>Acepto las <a href="#" data-legal="condiciones">condiciones de reserva</a> y las normas del estudio.</span></label><div class="err" id="bkErr" role="alert"></div><button class="btn primary" id="bkGo" style="width:100%">'+(sb?'Pagar señal y reservar':'Confirmar reserva')+'</button>';
+  $('#bookBody').innerHTML=h;
+}
+function cloudBook(){
+  var n=bk.name.trim(), em=bk.email.trim().toLowerCase(), btn=$('#bkGo');
+  btn.disabled=true; btn.textContent='Redirigiendo a Stripe…';
+  sb.functions.invoke('create-checkout',{body:{kind:'booking',date:bk.date,start:bk.start,dur:bk.dur,name:n,email:em,producer:bk.prod||null}}).then(function(r){
+    var d=r.data||{};
+    if(!d.url){
+      var e=d.error||'';
+      return refreshBusy().then(function(){bk.start=null;renderBook();$('#bkErr').textContent=/slot_taken/.test(e)?'Ese horario acaba de ocuparse. Elige otro.':/producer_unavailable|no_producer/.test(e)?'El productor no está disponible en ese horario.':'No se pudo iniciar el pago. Inténtalo de nuevo.'});
+    }
+    location.href=d.url;
+  });
+}
+document.addEventListener('click',function(e){
+  var t=e.target,x;
+  if((x=t.closest('[data-bkprod]'))&&t.closest('#bookBody')){bkFields();bk.prod=x.dataset.bkprod;bk.start=null;var P=studioProds().filter(function(u){return u.email===bk.prod})[0];if(P&&!prodAvail(P,bk.date)){for(var i=0;i<14;i++){var d=new Date();d.setDate(d.getDate()+i);if(prodAvail(P,iso(d))){bk.date=iso(d);break}}}renderBook();return}
+  if((x=t.closest('[data-bookprod]'))){bk.prod=x.dataset.bookprod;openBook();var P2=studioProds().filter(function(u){return u.email===bk.prod})[0];if(P2&&!prodAvail(P2,bk.date)){for(var j=0;j<14;j++){var d2=new Date();d2.setDate(d2.getDate()+j);if(prodAvail(P2,iso(d2))){bk.date=iso(d2);break}}renderBook()}return}
+});
+
+/* ---------- panel del productor: pestaña Estudio ---------- */
+PTABS.splice(PTABS.length-1,0,['studio','Estudio']); PSUB.studio='Ofrece sesiones en el estudio con tu precio y tus horarios'; IC.studio=IC.est;
+function hourOpts(sel,from,to){var o='';for(var h=from;h<=to;h++)o+='<option value="'+h+'"'+(h===sel?' selected':'')+'>'+h+':00</option>';return o}
+function prodStudio(u){
+  var s=u.studio||{}, av=s.avail||{}, dm=TERMS&&TERMS.studio_dm!=null?+TERMS.studio_dm:30;
+  var rows=[1,2,3,4,5,6,7].map(function(d){var a=av[d];return '<tr><td><label class="chk" style="margin:0"><input type="checkbox" data-pday="'+d+'"'+(a?' checked':'')+'> <span>'+DOWN[d]+'</span></label></td><td><select data-pfrom="'+d+'"'+(a?'':' disabled')+'>'+hourOpts(a?a[0]:ST.open,ST.open,ST.close-1)+'</select></td><td><select data-pto="'+d+'"'+(a?'':' disabled')+'>'+hourOpts(a?a[1]:ST.close,ST.open+1,ST.close)+'</select></td></tr>'}).join('');
+  var up=MYBOOKS.filter(function(b){return b.d>=iso(new Date())}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:a.h-b.h});
+  return '<div class="card"><h3>Sesiones en el estudio</h3><p class="sub2">Los artistas podrán reservar el estudio contigo en los horarios que marques. Drill Mafia pone las instalaciones y se queda el '+dm+' % de lo que se cobra; el resto es para ti y lo ves en Ganancias.</p>'+
+    '<label class="chk"><input type="checkbox" id="psOn"'+(s.on?' checked':'')+'> <span><b>Ofrezco sesiones en el estudio</b></span></label>'+
+    '<div class="fgrid"><div class="field"><label for="psRate">Tu precio por hora (€)</label><input id="psRate" type="number" min="1" step="1" value="'+(s.rate||'')+'" placeholder="Por ejemplo, 50"></div></div>'+
+    '<p class="ph2">Disponibilidad semanal</p><table class="tbl avtbl"><thead><tr><th>Día</th><th>Desde</th><th>Hasta</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<div class="err" id="psErr" role="alert"></div><button class="btn primary" id="psSave">Guardar</button>'+
+    (STINFO.equipment?'<p class="tsub" style="margin-top:12px">Equipo del estudio: '+esc(STINFO.equipment)+'</p>':'')+'</div>'+
+    '<div class="card"><h3>Tus próximas sesiones</h3><p class="sub2">Reservas confirmadas contigo</p>'+(up.length?'<table class="tbl"><thead><tr><th>Día</th><th>Horario</th><th>Artista</th><th>Estado</th></tr></thead><tbody>'+up.map(function(b){return '<tr><td><b>'+fdate(b.d+'T12:00:00',{weekday:'short',day:'numeric',month:'short'})+'</b></td><td>'+b.h+':00 – '+(b.h+b.dur)+':00</td><td>'+esc(b.name)+'<small class="tsub">'+esc(b.email)+'</small></td><td><span class="spill '+(b.status==='paid'?'ok':'pending')+'">'+(b.status==='paid'?'Confirmada':'Pendiente de pago')+'</span></td></tr>'}).join('')+'</tbody></table>':'<p class="note" style="margin:0">Todavía no tienes sesiones reservadas.</p>')+'</div>';
+}
+document.addEventListener('change',function(e){var d=e.target.dataset&&e.target.dataset.pday;if(d==null)return;$('[data-pfrom="'+d+'"]').disabled=!e.target.checked;$('[data-pto="'+d+'"]').disabled=!e.target.checked});
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#psSave'))return;
+  var on=$('#psOn').checked, rate=parseFloat($('#psRate').value), av={}, err=$('#psErr'), bad=false;
+  [1,2,3,4,5,6,7].forEach(function(d){if($('[data-pday="'+d+'"]').checked){var f=+$('[data-pfrom="'+d+'"]').value,t=+$('[data-pto="'+d+'"]').value;if(t-f<ST.min)bad=true;av[d]=[f,t]}});
+  if(on&&!(rate>0))return err.textContent='Pon tu precio por hora.';
+  if(on&&!Object.keys(av).length)return err.textContent='Marca al menos un día disponible.';
+  if(bad)return err.textContent='Cada franja tiene que durar al menos '+ST.min+' horas.';
+  var u=who(), v={on:on,rate:rate||0,avail:av};
+  sb.from('profiles').update({studio:v}).eq('id',me).then(function(r){if(r.error)return fail(r.error);u.studio=v;renderPanel();renderStudioInfo();toast(on?'Ya apareces en las reservas del estudio':'Sesiones desactivadas')});
+});
+
+/* ---------- admin: información del estudio (la dirección es privada) ---------- */
+function admStudioInfo(){
+  return '<div class="card"><h3>Información del estudio</h3><p class="sub2">El equipo y las normas se ven en la web. La dirección es privada: solo se envía en el email de reserva confirmada.</p>'+
+    '<div class="field"><label for="siEq">Equipo</label><input id="siEq" value="'+esc(STINFO.equipment||'')+'"></div>'+
+    '<div class="field"><label for="siRules">Normas básicas (una por línea)</label><textarea id="siRules" rows="6">'+esc(STINFO.rules||'')+'</textarea></div>'+
+    '<div class="field"><label for="siAddr">Dirección del estudio (privada)</label><input id="siAddr" value="'+esc(STADDR)+'"></div>'+
+    '<button class="btn primary" id="siSave">Guardar</button></div>';
+}
+document.addEventListener('click',function(e){
+  var t=e.target,x;
+  if(t.closest('#siSave')){
+    var v={equipment:$('#siEq').value.trim(),rules:$('#siRules').value.trim()}, a=$('#siAddr').value.trim();
+    Promise.all([sb.from('settings').upsert({key:'studio_info',value:v}),sb.from('secrets').upsert({key:'studio_address',value:a})]).then(function(rs){var er=rs.filter(function(r){return r.error})[0];if(er)return fail(er.error);STINFO=v;STADDR=a;renderStudioInfo();toast('Información del estudio guardada')});
+    return;
+  }
+  if((x=t.closest('[data-bkrest]'))){if(!confirm('¿Confirmas que se ha cobrado el resto de esta sesión en el estudio?'))return;x.disabled=true;sb.rpc('mark_booking_rest',{p_id:+x.dataset.bkrest}).then(function(r){if(r.error){x.disabled=false;return fail(r.error)}toast('Resto cobrado registrado');return cloudInit()})}
 });
 
 /* init */
